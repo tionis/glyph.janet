@@ -138,7 +138,7 @@
 (defn interactive-select [arr]
   (jff/choose "" arr))
 
-(defn file/select [config &named files-override]
+(defn file/select [config &named files-override preview-command]
   (def files (map |($0 0) (map |(peg/match patt_without_md $0) (if files-override files-override (get-files config)))))
   (def selected (interactive-select files))
   (if selected (string selected ".md") selected))
@@ -167,7 +167,8 @@
       )))
 
 (defn search [config query]
-  (def found_files (string/split "\n" (string/trim (git config "grep" "-i" "-l" query ":(exclude).obsidian/*" "./*"))))
+  (def found_files (filter |(peg/match patt_without_md $0)
+                           (string/split "\n" (string/trim (git config "grep" "-i" "-l" query ":(exclude).obsidian/*" "./*")))))
   (def selected_file (file/select config :files-override found_files))
   (if selected_file
       (edit config selected_file)
