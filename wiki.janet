@@ -1,5 +1,6 @@
 #!/bin/env janet
 (import ./filesystem)
+(import ./date)
 (import jff)
 (use spork)
 
@@ -106,17 +107,38 @@
    :default {:kind :accumulate
              :help positional_args_help_string}])
 
+(defn date->iso8601 [date_to_transform] (string (date_to_transform :year) "-" (+ (date_to_transform :month) 1) "-" (+ (date_to_transform :month-day) 1)))
+
 (defn parse_date
   "consumes a date in some semi-natural syntax and returns a struct formatted like {:year :month :day :year-day :month-day :week-day}"
   [date_str]
-  (label ret))
+  (cond
+    (peg/match ~(* "today" -1) date_str) (date->iso8601 (date/today-local))
+    (peg/match ~(* "tomorrow" -1) date_str) (date->iso8601 (date/days-after-local 1))
+    (peg/match ~(* "yesterday" -1) date_str) (date->iso8601 (date/days-ago-local 2))
+    (error (string "Could not parse date: " date_str))))
   # TODO check if string is already in rfc3339 format and parse it normally
   # TODO check if string is in 
   # TODO
+  # - $year-$month-$day
+  # - $month-$day
+  # - $day
+  # - $weekday (this week)
+  # - today
   # - tomorrow
   # - yesterday
+  # - $x days ago
+  # - in $x days
+  # - next week
+  # - last week
+  # - $x weeks ago
+  # - in $x weeks
   # - last $week_day
   # - next $week_day
+  # - next month
+  # - last month
+  # - in $x months
+  # - $x months ago
   # take inspiration from https://github.com/subsetpark/janet-dtgb and https://git.sr.ht/~pepe/bearimy/
 
 (def ls-files-peg
