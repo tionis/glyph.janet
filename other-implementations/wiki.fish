@@ -52,7 +52,7 @@ function wiki --description 'wiki editor script'
 				set weekday (date --date=$date +%A)
 				printf "# $date - $weekday\n## ToDo\n\n## Log" >"log/$date.md"
 			end
-			set file "log/$date"
+			set file_path "log/$date"
 		case sync
 			git -C "$wiki_working_dir" pull
 			git -C "$wiki_working_dir" push
