@@ -85,7 +85,7 @@
 (def argparse-params
   [(string "A simple local cli wiki using git for synchronization\n"
            "for help with commands use --command_help")
-   "wiki_dir" {:kind :flag
+   "wiki_dir" {:kind :option
                :help "Manually set wiki_dir"}
    "command_help" {:kind :flag
                    :help "Prints command help"}
@@ -93,11 +93,8 @@
                 :help "Do not commit changes"}
    "no_pull" {:kind :flag
               :help "do not pull from repo"}
-   "ask_commit_message" {:kind :flag
+   "ask-commit-message" {:kind :flag
                          :help "ask for the commit message instead of auto generating one"}
-   "search_term" {:kind :option
-                  :short "s"
-                  :help "search for a word or regex"}
    "cat" {:kind :option
           :short "c"
           :help "do not edit selected file, just print it to stdout"}
@@ -183,17 +180,23 @@
     (print "No file selected!")))
 
 (defn edit [config file]
+  (def file_path (path/join (config :wiki_dir) file))
+  (def parent_dir (path/dirname file_path))
+  (if (not (os/stat parent_dir))
+    (do (prin "Creating parent directories for " file " ... ")
+        (filesystem/create-directories parent_dir)
+        (print "Done."))
   (if (= (config :editor) :cat)
-      (print (slurp file))
+      (print (slurp file_path))
       (do
-        (os/execute [(config :editor) (path/join (config :wiki_dir) file)] :p)
+        (os/execute [(config :editor) file_path] :p)
         (def change_count (length (string/split "\n" (string/trim (git config "status" "--porcelain=v1")))))
         # TODO smarter commit
         (cond
           (= change_count 0) (do (print "No changes, not commiting..."))
           (= change_count 1) (do (git config "add" "-A") (git config "commit" "-m" (string "wiki: updated " file)))
           (> change_count 1) (do (git config "add" "-A") (git config "commit" "-m" (string "wiki: session from " file))))
-        (if (> change_count 0) (push/async config)))))
+        (if (> change_count 0) (push/async config))))))
 
 (defn search [config query]
   (def found_files (filter |(peg/match patt_without_md $0)
