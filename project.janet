@@ -3,7 +3,7 @@
   :description "dotfile managment" # some example metadata.
   #:lflags ["-static"]
   # Optional urls to git repositories that contain required artifacts.
-  :dependencies  ["https://tasadar.net/tionis/jff.git"
+  :dependencies  ["https://git.sr.ht/~pepe/jff.git"
                   "https://github.com/janet-lang/spork"])
 
 (declare-source

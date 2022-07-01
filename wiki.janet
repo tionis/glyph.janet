@@ -1,7 +1,7 @@
 #!/bin/env janet
 (import ./filesystem)
 (import ./date)
-(import jff)
+(import jff/ui :prefix "jff/")
 (use spork)
 
 # TODO
@@ -121,19 +121,21 @@
     (peg/match ~(* "tomorrow" -1) date_str) (date->iso8601 (date/days-after-local 1))
     (peg/match ~(* "yesterday" -1) date_str) (date->iso8601 (date/days-ago-local 2))
     (peg/match ~(* (repeat 4 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) (date_str)
-    (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1)) ((string "20" date_str))
-    (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) -1)) ((string ((date/today-local) :year) "-" date_str))
-    (peg/match ~(* (between 1 2 :d) -1)) (let [today (date/today-local)] (string (today :year)
-                                                                                 "-"
-                                                                                 (to_two_digit_string (+ (today :month) 1))
-                                                                                 "-"
-                                                                                 date_str))
+    (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) (string "20" date_str)
+    (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) (string ((date/today-local) :year) "-" date_str)
+    (peg/match ~(* (between 1 2 :d) -1) date_str)
+      (let [today (date/today-local)]
+           (string (today :year) "-" (to_two_digit_string (+ (today :month) 1)) "-" date_str))
+    (peg/match ~(* (some :d) " day" (opt "s") " ago") date_str)
+      (let [days_ago (scan-number ((peg/match ~(* (capture (some :d)) " day" (opt "s") " ago") date_str) 0))]
+           (date->iso8601 (date/days-ago-local days_ago)))
+    (peg/match ~(* "in " (some :d) " day" (opt "s")) date_str)
+      (let [days_after (scan-number ((peg/match ~(* "in " (capture (some :d)) " day" (opt "s")) date_str) 0))]
+           (date->iso8601 (date/days-after-local days_after)))
+    (peg/match ~(* "next week" -1) date_str) (date->iso8601 (date/days-after-local 7))
+    (peg/match ~(* "last week" -1) date_str) (date->iso8601 (date/days-ago-local 7))
     # TODO
     # - $weekday (this week)
-    # - $x days ago
-    # - in $x days
-    # - next week
-    # - last week
     # - $x weeks ago
     # - in $x weeks
     # - last $week_day
@@ -207,6 +209,10 @@
     (edit config file)
     (eprint "No file selected!")))
 
+(defn log [config date_arr]
+  (def date_str (if (= (length date_arr) 0) "today" (string/join date_arr " ")))
+  (edit config (string "log/" (parse_date date_str) ".md")))
+
 (defn sync [config]
   (git config "pull")
   (git config "push"))
@@ -237,8 +243,7 @@
     ["search" & search_terms] (search config (string/join search_terms " "))
     ["rm" file] (rm config file)
     ["rm"] (rm/interactive config)
-    ["log"] (edit config (string "log/" (parse_date "today") ".md"))
-    ["log" & date_arr] (edit config (string "log/" (parse_date (string/join date_arr " ")) ".md"))
+    ["log" & date_arr] (log config date_arr)
     ["sync"] (sync config)
     [file] (edit config file)
     nil (edit/interactive config)
