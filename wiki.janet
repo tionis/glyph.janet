@@ -42,13 +42,18 @@
                                     (if (= ((os/stat x) :mode) :directory)
                                         (indexify_dir x)))))
 
+(defn to_two_digit_string [num]
+  (if (< num 9)
+    (string "0" num)
+    (string num)))
+
 (defn shell-out
   "Shell out command and return output"
   [cmd]
   (let [x (os/spawn cmd :p {:out :pipe :err :pipe})
         s (:read (x :out) :all)]
     (:wait x)
-    s))
+    (if s s "")))
 
 (defn git [config & args] (shell-out ["git" "-C" (config :wiki_dir) ;args]))
 
@@ -97,7 +102,11 @@
    :default {:kind :accumulate
              :help positional_args_help_string}])
 
-(defn date->iso8601 [date_to_transform] (string (date_to_transform :year) "-" (+ (date_to_transform :month) 1) "-" (+ (date_to_transform :month-day) 1)))
+(defn date->iso8601 [date_to_transform] (string (date_to_transform :year)
+                                                "-"
+                                                (to_two_digit_string (+ (date_to_transform :month) 1))
+                                                "-" 
+                                                (to_two_digit_string (+ (date_to_transform :month-day) 1))))
 
 (defn parse_date
   "consumes a date in some semi-natural syntax and returns a struct formatted like {:year :month :day :year-day :month-day :week-day}"
@@ -106,6 +115,14 @@
     (peg/match ~(* "today" -1) date_str) (date->iso8601 (date/today-local))
     (peg/match ~(* "tomorrow" -1) date_str) (date->iso8601 (date/days-after-local 1))
     (peg/match ~(* "yesterday" -1) date_str) (date->iso8601 (date/days-ago-local 2))
+    (peg/match ~(* (repeat 4 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) (date_str)
+    (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1)) ((string "20" date_str))
+    (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) -1)) ((string ((date/today-local) :year) "-" date_str))
+    (peg/match ~(* (between 1 2 :d) -1)) (let [today (date/today-local)] (string (today :year)
+                                                                                 "-"
+                                                                                 (to_two_digit_string (+ (today :month) 1))
+                                                                                 "-"
+                                                                                 date_str))
     (error (string "Could not parse date: " date_str))))
   # TODO check if string is already in rfc3339 format and parse it normally
   # TODO check if string is in 
@@ -170,8 +187,8 @@
   (if (= (config :editor) :cat)
       (print (slurp file))
       (do
-        (os/execute [(config :editor) file] :p)
-        (def change_count (length (string/split "\n" (string/trim (git config "status" "--porcellain=v1")))))
+        (os/execute [(config :editor) (path/join (config :wiki_dir) file)] :p)
+        (def change_count (length (string/split "\n" (string/trim (git config "status" "--porcelain=v1")))))
         # TODO smarter commit
         (cond
           (= change_count 0) (do (print "No changes, not commiting..."))
@@ -223,8 +240,8 @@
     ["search" & search_terms] (search config (string/join search_terms " "))
     ["rm" file] (rm config file)
     ["rm"] (rm/interactive config)
-    ["log"] (edit config (parse_date "today"))
-    ["log" & date_arr] (edit config (parse_date (string/join date_arr " ")))
+    ["log"] (edit config (string "log/" (parse_date "today") ".md"))
+    ["log" & date_arr] (edit config (string "log/" (parse_date (string/join date_arr " ")) ".md"))
     ["sync"] (sync config)
     [file] (edit config file)
     nil (edit/interactive config)
