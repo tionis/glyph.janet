@@ -50,8 +50,11 @@
     (:wait x)
     s))
 
-(defn git [config & args]
-  (shell-out ["git" "-C" (config :wiki_dir) ;args]))
+(defn git [config & args] (shell-out ["git" "-C" (config :wiki_dir) ;args]))
+
+(defn pull/async [config] (ev/spawn (git config "pull"))) # TODO replace with forking solution
+
+(defn push/async [config] (ev/spawn (git config "push"))) # TODO replace with forking solution
 
 (def positional_args_help_string
   (string "Command to run or document to open\n"
@@ -67,20 +70,7 @@
   [log-item-string] 
   (def log-item-peg '{:main 0})) # TODO build this peg, it should output the datetime string
 
-(defn print_command_help []
-  (print positional_args_help_string))
-
-(defn leap-year?
-  ```
-  Given a year, returns true if the year is a leap year, false otherwise.
-  ```
-  [year]
-  (let [dy |(= 0 (% year $))]
-    (cond
-      (dy 400) true
-      (dy 100) false
-      (dy 4) true
-      false)))
+(defn print_command_help [] (print positional_args_help_string))
 
 (def argparse-params
   [(string "A simple local cli wiki using git for synchronization\n"
@@ -180,13 +170,14 @@
   (if (= (config :editor) :cat)
       (print (slurp file))
       (do
-        (print file)
-        # TODO edit using $EDITOR
-        # if changes
-        # git add
-        # git commit
-        # git push
-      )))
+        (os/execute [(config :editor) file] :p)
+        (def change_count (length (string/split "\n" (string/trim (git config "status" "--porcellain=v1")))))
+        # TODO smarter commit
+        (cond
+          (= change_count 0) (do (print "No changes, not commiting..."))
+          (= change_count 1) (do (git config "add" "-A") (git config "commit" "-m" (string "wiki: updated " file)))
+          (> change_count 1) (do (git config "add" "-A") (git config "commit" "-m" (string "wiki: session from " file))))
+        (if (> change_count 0) (push/async config)))))
 
 (defn search [config query]
   (def found_files (filter |(peg/match patt_without_md $0)
@@ -224,7 +215,9 @@
       (if (os/getenv "EDITOR")
           (put config :editor (os/getenv "EDITOR"))
           (put config :editor "vim"))) # fallback to default editor
-  (if (and (not (res "no_pull"))(not (= args @["sync"]))) (ev/spawn (git config "pull")))
+  (if (and (not (res "no_pull"))
+           (not (= args @["sync"])))
+      (pull/async config))
   (match args
     ["help"] (print "Help!")
     ["search" & search_terms] (search config (string/join search_terms " "))
