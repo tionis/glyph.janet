@@ -198,7 +198,7 @@
 (defn search [config query]
   (def found_files (filter |(peg/match patt_without_md $0)
                            (string/split "\n" (string/trim (git config "grep" "-i" "-l" query ":(exclude).obsidian/*" "./*")))))
-  (def selected_file (file/select config :files-override found_files))
+  (def selected_file (string (file/select config :files-override found_files) ".md"))
   (if selected_file
       (edit config selected_file)
       (eprint "No file selected!")))
