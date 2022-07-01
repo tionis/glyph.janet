@@ -11,6 +11,8 @@
 # - add log item parser (not sure for what exactly but may be fun to implement and get more familiar with PEGs)
 # - add daemon that autocommits on change and pulls regularily to support non-cli workflows/editors
 # - think about using file locking to prevent conflicts
+# - fix error in date library that jumps from 2022-07-02 -> yesterday -> 2022-06-30
+# - prefill new log documents
 
 # Notes
 # Log Item Syntax():
@@ -70,15 +72,18 @@
   (string "Command to run or document to open\n"
           "If no command or file is given it switches to an interactiv document seletor\n"
           "Supported commands:\n"
-          "- rm\n"
-          "- log\n"
-          "- sync\n"
-          "- git"))
+          "- rm $path - delete document at path\n"
+          "- search $search_term - search using a regex\n"
+          "- log $optional_natural_date - edit a log for an optional date\n"
+          "- sync - sync the repo\n"
+          "- git $args - pass args thru to git"))
 
 #(defn parse-log-item
 #  "Parses a log item and outputs a struct describing the time period for task, its completeness status and its description"
 #  [log-item-string] 
 #  (def log-item-peg '{:main 0})) # TODO build this peg, it should output the datetime string
+#  TODO parse datetime string into following struct: {:from date_here :to date_here :duration duration_here_only_if_needed)}
+#  date_here can be :beginning_of_time :end_of_time a date struct formatted like (os/date)
 
 (defn print_command_help [] (print positional_args_help_string))
 
