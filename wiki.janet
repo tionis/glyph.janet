@@ -5,7 +5,12 @@
 (use spork)
 
 # TODO
-# preview for file selector still missing
+# - add preview for file selector
+# - add forking async pull/push
+# - finish date parser
+# - add log item parser (not sure for what exactly but may be fun to implement and get more familiar with PEGs)
+# - add daemon that autocommits on change and pulls regularily to support non-cli workflows/editors
+# - think about using file locking to prevent conflicts
 
 # Notes
 # Log Item Syntax():
@@ -70,10 +75,10 @@
           "- sync\n"
           "- git"))
 
-(defn parse-log-item
-  "Parses a log item and outputs a struct describing the time period for task, its completeness status and its description"
-  [log-item-string] 
-  (def log-item-peg '{:main 0})) # TODO build this peg, it should output the datetime string
+#(defn parse-log-item
+#  "Parses a log item and outputs a struct describing the time period for task, its completeness status and its description"
+#  [log-item-string] 
+#  (def log-item-peg '{:main 0})) # TODO build this peg, it should output the datetime string
 
 (defn print_command_help [] (print positional_args_help_string))
 
@@ -123,30 +128,21 @@
                                                                                  (to_two_digit_string (+ (today :month) 1))
                                                                                  "-"
                                                                                  date_str))
+    # TODO
+    # - $weekday (this week)
+    # - $x days ago
+    # - in $x days
+    # - next week
+    # - last week
+    # - $x weeks ago
+    # - in $x weeks
+    # - last $week_day
+    # - next $week_day
+    # - next month
+    # - last month
+    # - in $x months
+    # - $x months ago
     (error (string "Could not parse date: " date_str))))
-  # TODO check if string is already in rfc3339 format and parse it normally
-  # TODO check if string is in 
-  # TODO
-  # - $year-$month-$day
-  # - $month-$day
-  # - $day
-  # - $weekday (this week)
-  # - today
-  # - tomorrow
-  # - yesterday
-  # - $x days ago
-  # - in $x days
-  # - next week
-  # - last week
-  # - $x weeks ago
-  # - in $x weeks
-  # - last $week_day
-  # - next $week_day
-  # - next month
-  # - last month
-  # - in $x months
-  # - $x months ago
-  # take inspiration from https://github.com/subsetpark/janet-dtgb and https://git.sr.ht/~pepe/bearimy/
 
 (def ls-files-peg
     "Peg to handle files from git ls-files"
@@ -161,8 +157,9 @@
        (filter |(peg/match patt_without_md $0)
                (filesystem/list-all-files (config :wiki_dir)))))
   #(peg/match ls-files-peg (string (git config "ls-files")) "\n"))
-  # - Use git ls-files as it is faster
-  #   warning: ls-files does not print special chars but puts the paths between " and escapes the special chars
+  # - maybe use git ls-files as it is faster?
+  # - warning: ls-files does not print special chars but puts the paths between " and escapes the special chars
+  # - problem: this is a bit more complex and I would have to fix my PEG above to correctly parse the output again
 
 (defn interactive-select [arr]
   (jff/choose "" arr))
