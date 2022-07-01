@@ -245,6 +245,6 @@
     ["rm"] (rm/interactive config)
     ["log" & date_arr] (log config date_arr)
     ["sync"] (sync config)
-    [file] (edit config file)
+    [file] (edit config (string file ".md"))
     nil (edit/interactive config)
     _ (print "Invalid syntax!")))
