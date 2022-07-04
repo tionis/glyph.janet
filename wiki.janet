@@ -44,8 +44,8 @@
 
 (defn get-default-log-doc [date_str]
   (def today (date/from-string date_str))
-  (string "# " date_str " - " ((date/week-days :long) (today :week-day)) "\n"
-          "[yesterday](" (:format (date/days-ago 1 today)) ") <--> [tomorrow](" (:format (date/days-after 1 today)) ")\n"
+  (string "# " date_str #" - " ((date/week-days :long) (today :week-day)) "\n"
+          #"[yesterday](" (:format (date/days-ago 1 today)) ") <--> [tomorrow](" (:format (date/days-after 1 today)) ")\n"
           "\n"
           "## ToDo\n"
           "\n"
@@ -121,7 +121,7 @@
               :help "do not pull from repo"}
    "ask-commit-message" {:kind :flag
                          :help "ask for the commit message instead of auto generating one"}
-   "cat" {:kind :option
+   "cat" {:kind :flag
           :short "c"
           :help "do not edit selected file, just print it to stdout"}
    "verbose" {:kind :flag
