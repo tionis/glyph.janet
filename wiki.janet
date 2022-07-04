@@ -42,6 +42,15 @@
 
 (def patt_without_md (peg/compile '{:main (* (capture (any (* (not ".md") 1))) ".md")}))
 
+(defn get-default-log-doc [date_str]
+  (def today (date/from-string date_str))
+  (string "# " date_str " - " ((date/week-days :long) (today :week-day)) "\n"
+          "[yesterday](" (:format (date/days-ago 1 today)) ") <--> [tomorrow](" (:format (date/days-after 1 today)) ")\n"
+          "\n"
+          "## ToDo\n"
+          "\n"
+          "## Notes\n"))
+
 (defn indexify_dir
   "transform given dir to index.md based md structure"
   [path]
@@ -134,7 +143,7 @@
     (peg/match ~(* "today" -1) date_str) (date->iso8601 (date/today-local))
     (peg/match ~(* "tomorrow" -1) date_str) (date->iso8601 (date/days-after-local 1))
     (peg/match ~(* "yesterday" -1) date_str) (date->iso8601 (date/days-ago-local 2))
-    (peg/match ~(* (repeat 4 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) (date_str)
+    (peg/match ~(* (repeat 4 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) date_str
     (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) (string "20" date_str)
     (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) (string ((date/today-local) :year) "-" date_str)
     (peg/match ~(* (between 1 2 :d) -1) date_str)
@@ -218,7 +227,7 @@
 (defn search [config query]
   (def found_files (filter |(peg/match patt_without_md $0)
                            (string/split "\n" (string/trim (git config "grep" "-i" "-l" query ":(exclude).obsidian/*" "./*")))))
-  (def selected_file (string (file/select config :files-override found_files) ".md"))
+  (def selected_file (file/select config :files-override found_files))
   (if selected_file
       (edit config selected_file)
       (eprint "No file selected!")))
@@ -231,7 +240,10 @@
 
 (defn log [config date_arr]
   (def date_str (if (= (length date_arr) 0) "today" (string/join date_arr " ")))
-  (edit config (string "log/" (parse_date date_str) ".md")))
+  (def doc_path (string "log/" (parse_date date_str) ".md"))
+  (def doc_abs_path (path/join (config :wiki_dir) doc_path))
+  (if (not (os/stat doc_abs_path)) (spit doc_abs_path (get-default-log-doc date_str)))
+  (edit config doc_path))
 
 (defn sync [config]
   (git config "pull")
