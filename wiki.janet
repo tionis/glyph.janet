@@ -94,6 +94,7 @@
           "If no command or file is given it switches to an interactiv document seletor\n"
           "Supported commands:\n"
           "- rm $path - delete document at path\n"
+          "- mv $source $target - move document from $source to $target\n"
           "- search $search_term - search using a regex\n"
           "- log $optional_natural_date - edit a log for an optional date\n"
           "- sync - sync the repo\n"
@@ -250,6 +251,12 @@
   (git config "pull")
   (git config "push"))
 
+(defn mv [config source target]
+  (git config "mv" (path/join (config :wiki_dir) source) (path/join (config :wiki_dir) target))
+  (git config "add" source)
+  (git config "commit" "-m" (string "wiki: moved " source " to " target))
+  (push/async config))
+
 (defn main [_ & raw_args]
   (if (and (> (length raw_args) 0) (= (raw_args 0) "git")) # pass through calls to wiki git without parsing them for flags
       (os/exit (os/execute ["git" "-C" (os/getenv "WIKI_DIR") ;(slice raw_args 1 -1)] :p)))
@@ -276,6 +283,7 @@
     ["search" & search_terms] (search config (string/join search_terms " "))
     ["rm" file] (rm config file)
     ["rm"] (rm/interactive config)
+    ["mv" source target] (mv config source target)
     ["log" & date_arr] (log config date_arr)
     ["sync"] (sync config)
     [file] (edit config (string file ".md"))
