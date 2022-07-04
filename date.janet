@@ -93,11 +93,12 @@
                                           (? (* :time-sep :seconds)))))))))))
                ,mc)}))
 
-(defn from-string [x]
+(defn from-string [x] # TODO add week-day and year-day
   (merge
     year-start
     month-start
-    midnite ;(peg/match date-time-grammar x)))
+    midnite ;(peg/match date-time-grammar x)
+    Date))
 
 (defn normalize [x]
   (case (type x)
@@ -315,7 +316,7 @@
 (defn last-week-start [&opt tdy]
   (start-of-week -1 tdy))
 
-(defn months-ago [n &opt tdy]
+(defn months-ago [n &opt tdy] # TODO fix months in future (positive numbers)
   (default tdy (today))
   (var ds (tdy :month-day))
   (var me (:sooner (make-calendar (merge tdy month-start)) (days 1)))
