@@ -13,6 +13,18 @@
 # - think about using file locking to prevent conflicts
 # - fix error in date library that jumps from 2022-07-02 -> yesterday -> 2022-06-30
 # - prefill new log documents
+# - save which doc is currently being edited in cache or use file locks and only commit files not locked by other wiki processes
+
+# Note for parsing git status porcellain:
+# ADDED:     = 'A'
+# DELETED    = 'D'
+# MODIFIED   = 'M'
+# RENAMED    = 'R'
+# COPIED     = 'C'
+# IGNORED    = 'I'
+# UNTRACKED  = '?'
+# TYPECHANGE = 'T'
+# UNREADABLE = 'X'
 
 # Notes
 # Log Item Syntax():
