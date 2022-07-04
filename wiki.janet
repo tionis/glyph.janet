@@ -252,8 +252,12 @@
   (git config "push"))
 
 (defn mv [config source target]
-  (git config "mv" (path/join (config :wiki_dir) source) (path/join (config :wiki_dir) target))
-  (git config "add" source)
+  (def source_path (path/join (config :wiki_dir) (string source ".md")))
+  (def target_path (path/join (config :wiki_dir) (string target ".md")))
+  (pp source_path)
+  (git config "mv" source_path target_path)
+  (git config "add" source_path)
+  (git config "add" target_path)
   (git config "commit" "-m" (string "wiki: moved " source " to " target))
   (push/async config))
 
