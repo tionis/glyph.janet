@@ -240,9 +240,10 @@
 
 (defn log [config date_arr]
   (def date_str (if (= (length date_arr) 0) "today" (string/join date_arr " ")))
-  (def doc_path (string "log/" (parse_date date_str) ".md"))
+  (def parsed_date (parse_date date_str))
+  (def doc_path (string "log/" parsed_date ".md"))
   (def doc_abs_path (path/join (config :wiki_dir) doc_path))
-  (if (not (os/stat doc_abs_path)) (spit doc_abs_path (get-default-log-doc date_str)))
+  (if (not (os/stat doc_abs_path)) (spit doc_abs_path (get-default-log-doc parsed_date)))
   (edit config doc_path))
 
 (defn sync [config]
