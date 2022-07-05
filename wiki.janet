@@ -91,8 +91,9 @@
 
 (def positional_args_help_string
   (string "Command to run or document to open\n"
-          "If no command or file is given it switches to an interactiv document seletor\n"
+          "If no command or file is given it switches to an interactiv document selector\n"
           "Supported commands:\n"
+          "- ls $optional_path - list all files at path or root if not path was given\n"
           "- rm $path - delete document at path\n"
           "- mv $source $target - move document from $source to $target\n"
           "- search $search_term - search using a regex\n"
@@ -171,17 +172,21 @@
     (error (string "Could not parse date: " date_str))))
 
 (def ls-files-peg
-    "Peg to handle files from git ls-files"
-    (peg/compile
-      ~{:param (+ (* `"` '(any (if-not `"` (* (? "\\") 1))) `"`)
-                  (* `'` '(any (if-not `'` (* (? "\\") 1))) `'`)
-                  '(some (if-not "" 1)))
-        :main (any (* (capture (any (* (not "\n") 1))) "\n"))}))
+  "Peg to handle files from git ls-files"
+  (peg/compile
+    ~{:param (+ (* `"` '(any (if-not `"` (* (? "\\") 1))) `"`)
+                (* `'` '(any (if-not `'` (* (? "\\") 1))) `'`)
+                '(some (if-not "" 1)))
+      :main (any (* (capture (any (* (not "\n") 1))) "\n"))}))
 
-(defn get-files [config]
-  (map |((peg/match ~(* ,(config :wiki_dir) (capture (any 1))) $0) 0)
-       (filter |(peg/match patt_without_md $0)
-               (filesystem/list-all-files (config :wiki_dir)))))
+(defn get-files [config &opt path]
+  (default path "")
+  (def p (path/join (config :wiki_dir) path))
+  (if (= ((os/stat p) :mode) :file)
+      p
+      (map |((peg/match ~(* ,p (? (+ "/" "\\")) (capture (any 1))) $0) 0)
+            (filter |(peg/match patt_without_md $0)
+                    (filesystem/list-all-files p)))))
   #(peg/match ls-files-peg (string (git config "ls-files")) "\n"))
   # - maybe use git ls-files as it is faster?
   # - warning: ls-files does not print special chars but puts the paths between " and escapes the special chars
@@ -285,6 +290,7 @@
   (match args
     ["help"] (print "Help!")
     ["search" & search_terms] (search config (string/join search_terms " "))
+    ["ls" & path] (each file (get-files config (if (> (length path) 0) (string/join path " ") nil)) (print file))
     ["rm" file] (rm config file)
     ["rm"] (rm/interactive config)
     ["mv" source target] (mv config source target)
