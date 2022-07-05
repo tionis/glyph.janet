@@ -14,6 +14,7 @@
 # - fix error in date library that jumps from 2022-07-02 -> yesterday -> 2022-06-30
 # - prefill new log documents
 # - save which doc is currently being edited in cache or use file locks and only commit files not locked by other wiki processes
+# - add cal/calendar subcommand which provides an UI for choosing a day for log
 
 # Note for parsing git status porcellain:
 # ADDED:     = 'A'
@@ -85,9 +86,9 @@
 
 (defn git [config & args] (shell-out ["git" "-C" (config :wiki_dir) ;args]))
 
-(defn pull/async [config] (ev/spawn (git config "pull"))) # TODO replace with forking solution
+(defn pull/async [config] (ev/spawn (git config "pull"))) # TODO replace async solution
 
-(defn push/async [config] (ev/spawn (git config "push"))) # TODO replace with forking solution
+(defn push/async [config] (ev/spawn (git config "push"))) # TODO replace async solution
 
 (defn commit [config default_message]
   (if (not (config "no-commit"))
@@ -152,7 +153,7 @@
   (cond
     (peg/match ~(* "today" -1) date_str) (date->iso8601 (date/today-local))
     (peg/match ~(* "tomorrow" -1) date_str) (date->iso8601 (date/days-after-local 1))
-    (peg/match ~(* "yesterday" -1) date_str) (date->iso8601 (date/days-ago-local 2))
+    (peg/match ~(* "yesterday" -1) date_str) (date->iso8601 (date/days-ago-local 1))
     (peg/match ~(* (repeat 4 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) date_str
     (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) (string "20" date_str)
     (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) (string ((date/today-local) :year) "-" date_str)
