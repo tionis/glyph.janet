@@ -89,6 +89,14 @@
 
 (defn push/async [config] (ev/spawn (git config "push"))) # TODO replace with forking solution
 
+(defn commit [config default_message]
+  (if (not (config "no-commit"))
+      (if (config "ask-commit-message")
+        (do (prin "Commit Message: ")
+            (git config "commit" "-m" (file/read stdin :line)))
+        (git config "commit" "-m" default_message))))
+
+
 (def positional_args_help_string
   (string "Command to run or document to open\n"
           "If no command or file is given it switches to an interactiv document selector\n"
@@ -202,8 +210,8 @@
 
 (defn rm [config file]
   (git config "rm" file)
-  (git config "commit" "-m" (string "wiki: deleted " file))
-  (git config "push")) # TODO do this async
+  (commit config (string "wiki: deleted " file))
+  (push/async config))
 
 (defn rm/interactive [config]
   (def file (file/select config))
@@ -226,8 +234,8 @@
         # TODO smarter commit
         (cond
           (= change_count 0) (do (print "No changes, not commiting..."))
-          (= change_count 1) (do (git config "add" "-A") (git config "commit" "-m" (string "wiki: updated " file)))
-          (> change_count 1) (do (git config "add" "-A") (git config "commit" "-m" (string "wiki: session from " file))))
+          (= change_count 1) (do (git config "add" "-A") (commit config (string "wiki: updated " file)))
+          (> change_count 1) (do (git config "add" "-A") (commit config (string "wiki: session from " file))))
         (if (> change_count 0) (push/async config))))))
 
 (defn search [config query]
@@ -263,7 +271,7 @@
   (git config "mv" source_path target_path)
   (git config "add" source_path)
   (git config "add" target_path)
-  (git config "commit" "-m" (string "wiki: moved " source " to " target))
+  (commit config (string "wiki: moved " source " to " target))
   (push/async config))
 
 (defn main [_ & raw_args]
