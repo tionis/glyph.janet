@@ -103,15 +103,13 @@
 (defn git [config & args] (shell-out ["git" "-C" (config :wiki_dir) ;args]))
 
 # TODO remove dependency to setsid
+# maybe use c wrapper and c code as seen here:
+# https://man7.org/tlpi/code/online/book/daemons/become_daemon.c.html
 (defn git/async [config & args]
   (def null_file (get-null-file))
   (def fout (os/open null_file :w))
   (def ferr (os/open null_file :w))
   (os/execute ["setsid" "-f" "git" "-C" (config :wiki_dir ) ;args] :p {:out fout :err ferr}))
-
-# TODO remove wrappers
-(defn pull/async [config] (git/async config "pull"))
-(defn push/async [config] (git/async config "push"))
 
 (defn commit [config default_message]
   (if (not (config "no-commit"))
@@ -235,7 +233,7 @@
 (defn rm [config file]
   (git config "rm" file)
   (commit config (string "wiki: deleted " file))
-  (push/async config))
+  (git/async config "push"))
 
 (defn rm/interactive [config]
   (def file (file/select config))
@@ -261,7 +259,7 @@
           (= change_count 0) (do (print "No changes, not commiting..."))
           (= change_count 1) (do (git config "add" "-A") (commit config (string "wiki: updated " file)))
           (> change_count 1) (do (git config "add" "-A") (commit config (string "wiki: session from " file))))
-        (if (> change_count 0) (push/async config)))))
+        (if (> change_count 0) (git/async config "push")))))
 
 (defn search [config query]
   (def found_files (filter |(peg/match patt_without_md $0)
@@ -297,7 +295,7 @@
   (git config "add" source_path)
   (git config "add" target_path)
   (commit config (string "wiki: moved " source " to " target))
-  (push/async config))
+  (git/async config "push"))
 
 (defn main [_ & raw_args]
   (if (and (> (length raw_args) 0) (= (raw_args 0) "git")) # pass through calls to wiki git without parsing them for flags
@@ -319,7 +317,7 @@
           (put config :editor "vim"))) # fallback to default editor
   (if (and (not (res "no_pull"))
            (not (= args @["sync"])))
-      (pull/async config))
+      (git/async config "pull"))
   (match args
     ["help"] (print "Help!")
     ["search" & search_terms] (search config (string/join search_terms " "))
