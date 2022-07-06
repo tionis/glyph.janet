@@ -41,6 +41,12 @@
 # 13:00 P2h15m = start at 13:00 and do task for 2h and 15 min
 # 12:00<<13:00 P20m = task starts somewhere between 12:00 and 13:00 and needs 20 minutes
 
+# TODO remove this hack as soon as https://github.com/janet-lang/janet/issues/995 is solved
+(ffi/context)
+(ffi/defbind setpgid :int [pid :int pgid :int])
+(ffi/defbind getpgid :int [pid :int])
+
+
 (def patt_without_md (peg/compile '{:main (* (capture (any (* (not ".md") 1))) ".md")}))
 
 (defn get-default-log-doc [date_str]
@@ -225,8 +231,9 @@
   (def parent_dir (path/dirname file_path))
   (if (not (os/stat parent_dir))
     (do (prin "Creating parent directories for " file " ... ")
+        (flush)
         (filesystem/create-directories parent_dir)
-        (print "Done."))
+        (print "Done.")))
   (if (= (config :editor) :cat)
       (print (slurp file_path))
       (do
@@ -237,7 +244,7 @@
           (= change_count 0) (do (print "No changes, not commiting..."))
           (= change_count 1) (do (git config "add" "-A") (commit config (string "wiki: updated " file)))
           (> change_count 1) (do (git config "add" "-A") (commit config (string "wiki: session from " file))))
-        (if (> change_count 0) (push/async config))))))
+        (if (> change_count 0) (push/async config)))))
 
 (defn search [config query]
   (def found_files (filter |(peg/match patt_without_md $0)

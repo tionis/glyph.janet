@@ -15,7 +15,7 @@
   (def indices (string/find-all path/sep path))
   (each idx indices
     (def subpath (string/slice path 0 idx))
-    (func subpath))
+    (if (not= subpath "") (func subpath)))
   (func path))
 
 # ------------------------------------------------------------------------------
@@ -56,10 +56,11 @@
 (defn create-directories
   "Create all directories in the path to the given directory."
   [dir]
-  (each-subpath dir
+  (def d (if (= (slice dir -2) path/sep) (slice dir 0 -2 ) dir))
+  (each-subpath d
     (fn [subpath]
-      (when (not (exists? subpath))
-        (os/mkdir subpath)))))
+        (when (not (exists? subpath))
+              (os/mkdir subpath)))))
 
 (defn remove-directories
   "Remove a directory recursively."
