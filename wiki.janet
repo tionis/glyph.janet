@@ -119,7 +119,7 @@
         (git config "commit" "-m" default_message))))
 
 (def positional_args_help_string
-  (string `Command to run or document to open\n"
+  (string `Command to run or document to open
           If no command or file is given it switches to an interactiv document selector
           Supported commands:
           - ls $optional_path - list all files at path or root if not path was given
@@ -318,7 +318,7 @@
            (not (= args @["sync"])))
       (git/async config "pull"))
   (match args
-    ["help"] (print "Help!")
+    ["help"] (print_command_help)
     ["search" & search_terms] (search config (string/join search_terms " "))
     ["ls" & path] (each file (get-files config (if (> (length path) 0) (string/join path " ") nil)) (print file))
     ["rm" file] (rm config file)
