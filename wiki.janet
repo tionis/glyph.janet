@@ -41,11 +41,11 @@
 # 13:00 P2h15m = start at 13:00 and do task for 2h and 15 min
 # 12:00<<13:00 P20m = task starts somewhere between 12:00 and 13:00 and needs 20 minutes
 
-# TODO remove this hack as soon as https://github.com/janet-lang/janet/issues/995 is solved
-(ffi/context)
-(ffi/defbind setpgid :int [pid :int pgid :int])
-(ffi/defbind getpgid :int [pid :int])
-
+# old hack as workaround https://github.com/janet-lang/janet/issues/995 is solved
+# will keep this here for future reference
+#(ffi/context)
+#(ffi/defbind setpgid :int [pid :int pgid :int])
+#(ffi/defbind getpgid :int [pid :int])
 
 (def patt_without_md (peg/compile '{:main (* (capture (any (* (not ".md") 1))) ".md")}))
 
@@ -118,7 +118,6 @@
             (git config "commit" "-m" (file/read stdin :line)))
         (git config "commit" "-m" default_message))))
 
-
 (def positional_args_help_string
   (string `Command to run or document to open\n"
           If no command or file is given it switches to an interactiv document selector
@@ -131,12 +130,12 @@
           - sync - sync the repo
           - git $args - pass args thru to git`))
 
-#(defn parse-log-item
-#  "Parses a log item and outputs a struct describing the time period for task, its completeness status and its description"
-#  [log-item-string] 
-#  (def log-item-peg '{:main 0})) # TODO build this peg, it should output the datetime string
-#  TODO parse datetime string into following struct: {:from date_here :to date_here :duration duration_here_only_if_needed)}
-#  date_here can be :beginning_of_time :end_of_time a date struct formatted like (os/date)
+(defn parse-log-item
+  "Parses a log item and outputs a struct describing the time period for task, its completeness status and its description"
+  [log-item-string]
+  (def log-item-peg '{:main 0})) # TODO build this peg, it should output the datetime string
+  #TODO parse datetime string into following struct: {:from date_here :to date_here :duration duration_here_only_if_needed)}
+  #date_here can be :beginning_of_time :end_of_time a date struct formatted like (os/date)
 
 (defn print_command_help [] (print positional_args_help_string))
 
