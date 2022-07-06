@@ -49,6 +49,16 @@
 
 (def patt_without_md (peg/compile '{:main (* (capture (any (* (not ".md") 1))) ".md")}))
 
+(defn get-null-file []
+  (case (os/which)
+    :windows "NUL"
+    :macos "/dev/null"
+    :web (error "Unsupported Operation")
+    :linux "/dev/null"
+    :freebsd "/dev/null"
+    :openbsd "/dev/null"
+    :posix "/dev/null"))
+
 (defn get-default-log-doc [date_str]
   (def today (date/from-string date_str))
   (string "# " date_str #" - " ((date/week-days :long) (today :week-day)) "\n"
@@ -92,9 +102,16 @@
 
 (defn git [config & args] (shell-out ["git" "-C" (config :wiki_dir) ;args]))
 
-(defn pull/async [config] (ev/spawn (git config "pull"))) # TODO replace async solution
+# TODO remove dependency to setsid
+(defn git/async [config & args]
+  (def null_file (get-null-file))
+  (def fout (os/open null_file :w))
+  (def ferr (os/open null_file :w))
+  (os/execute ["setsid" "-f" "git" "-C" (config :wiki_dir ) ;args] :p {:out fout :err ferr}))
 
-(defn push/async [config] (ev/spawn (git config "push"))) # TODO replace async solution
+# TODO remove wrappers
+(defn pull/async [config] (git/async config "pull"))
+(defn push/async [config] (git/async config "push"))
 
 (defn commit [config default_message]
   (if (not (config "no-commit"))
@@ -105,16 +122,16 @@
 
 
 (def positional_args_help_string
-  (string "Command to run or document to open\n"
-          "If no command or file is given it switches to an interactiv document selector\n"
-          "Supported commands:\n"
-          "- ls $optional_path - list all files at path or root if not path was given\n"
-          "- rm $path - delete document at path\n"
-          "- mv $source $target - move document from $source to $target\n"
-          "- search $search_term - search using a regex\n"
-          "- log $optional_natural_date - edit a log for an optional date\n"
-          "- sync - sync the repo\n"
-          "- git $args - pass args thru to git"))
+  (string `Command to run or document to open\n"
+          If no command or file is given it switches to an interactiv document selector
+          Supported commands:
+          - ls $optional_path - list all files at path or root if not path was given
+          - rm $path - delete document at path
+          - mv $source $target - move document from $source to $target
+          - search $search_term - search using a regex
+          - log $optional_natural_date - edit a log for an optional date
+          - sync - sync the repo
+          - git $args - pass args thru to git`))
 
 #(defn parse-log-item
 #  "Parses a log item and outputs a struct describing the time period for task, its completeness status and its description"
