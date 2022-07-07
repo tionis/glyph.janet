@@ -287,8 +287,8 @@
   (edit config doc_path))
 
 (defn sync [config]
-  (git config "pull")
-  (git config "push"))
+  (os/execute ["git" "-C" (config :wiki_dir) "pull"] :p)
+  (os/execute ["git" "-C" (config :wiki_dir) "push"] :p))
 
 (defn mv [config source target]
   (def source_path (path/join (config :wiki_dir) (string source ".md")))
