@@ -99,7 +99,7 @@
 (defn shell-out
   "Shell out command and return output"
   [cmd]
-  (let [x (os/spawn cmd :p {:out :pipe :err :pipe})
+  (let [x (os/spawn cmd :p {:out :pipe})
         s (:read (x :out) :all)]
     (:wait x)
     (if s s "")))
@@ -112,8 +112,7 @@
 (defn git/async [config & args]
   (def null_file (get-null-file))
   (def fout (os/open null_file :w))
-  (def ferr (os/open null_file :w))
-  (os/execute ["setsid" "-f" "git" "-C" (config :wiki_dir ) ;args] :p {:out fout :err ferr}))
+  (os/execute ["setsid" "-f" "git" "-C" (config :wiki_dir ) ;args] :p {:out fout}))
 
 (defn commit [config default_message]
   (if (not (config "no-commit"))
