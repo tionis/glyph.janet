@@ -15,6 +15,10 @@
 # - prefill new log documents
 # - save which doc is currently being edited in cache or use file locks and only commit files not locked by other wiki processes
 # - add cal/calendar subcommand which provides an UI for choosing a day for log
+# - add lint subcommand that check for broken links etc across the wiki
+# - add server side subtree based wiki sharing
+# - think about possibility of integrating hyperlist for recipes, todos and the like
+# - add todo parser to show due tasks, show tasks by tag etc.
 
 # Note for parsing git status porcellain:
 # ADDED:     = 'A'
