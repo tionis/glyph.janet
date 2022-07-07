@@ -10,7 +10,10 @@
   # :source is an array or tuple that can contain
   # source files and directories that will be installed.
   # Often will just be a single file or single directory.
-  :source ["wiki.janet"])
+  :source ["wiki.janet"
+           "dateparser.janet"
+           "date.janet"
+           "filesystem.janet"])
 
 #(declare-native
   # :name "mynative"

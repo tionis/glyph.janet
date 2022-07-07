@@ -1,6 +1,7 @@
 #!/bin/env janet
 (import ./filesystem)
 (import ./date)
+(import ./dateparser)
 (import jff/ui :prefix "jff/")
 (use spork)
 
@@ -91,11 +92,6 @@
                                     (if (= ((os/stat x) :mode) :directory)
                                         (indexify_dir x)))))
 
-(defn to_two_digit_string [num]
-  (if (< num 9)
-    (string "0" num)
-    (string num)))
-
 (defn shell-out
   "Shell out command and return output"
   [cmd]
@@ -163,45 +159,6 @@
               :help "more verbose logging"}
    :default {:kind :accumulate
              :help positional_args_help_string}])
-
-(defn date->iso8601 [date_to_transform] (string (date_to_transform :year)
-                                                "-"
-                                                (to_two_digit_string (+ (date_to_transform :month) 1))
-                                                "-" 
-                                                (to_two_digit_string (+ (date_to_transform :month-day) 1))))
-
-(defn parse_date
-  "consumes a date in some semi-natural syntax and returns a struct formatted like {:year :month :day :year-day :month-day :week-day}"
-  [date_str]
-  (cond
-    (peg/match ~(* "today" -1) date_str) (date->iso8601 (date/today-local))
-    (peg/match ~(* "tomorrow" -1) date_str) (date->iso8601 (date/days-after-local 1))
-    (peg/match ~(* "yesterday" -1) date_str) (date->iso8601 (date/days-ago-local 1))
-    (peg/match ~(* (repeat 4 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) date_str
-    (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) (string "20" date_str)
-    (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) (string ((date/today-local) :year) "-" date_str)
-    (peg/match ~(* (between 1 2 :d) -1) date_str)
-      (let [today (date/today-local)]
-           (string (today :year) "-" (to_two_digit_string (+ (today :month) 1)) "-" date_str))
-    (peg/match ~(* (some :d) " day" (opt "s") " ago") date_str)
-      (let [days_ago (scan-number ((peg/match ~(* (capture (some :d)) " day" (opt "s") " ago") date_str) 0))]
-           (date->iso8601 (date/days-ago-local days_ago)))
-    (peg/match ~(* "in " (some :d) " day" (opt "s")) date_str)
-      (let [days_after (scan-number ((peg/match ~(* "in " (capture (some :d)) " day" (opt "s")) date_str) 0))]
-           (date->iso8601 (date/days-after-local days_after)))
-    (peg/match ~(* "next week" -1) date_str) (date->iso8601 (date/days-after-local 7))
-    (peg/match ~(* "last week" -1) date_str) (date->iso8601 (date/days-ago-local 7))
-    # TODO
-    # - $weekday (this week)
-    # - $x weeks ago
-    # - in $x weeks
-    # - last $week_day
-    # - next $week_day
-    # - next month
-    # - last month
-    # - in $x months
-    # - $x months ago
-    (error (string "Could not parse date: " date_str))))
 
 (def ls-files-peg
   "Peg to handle files from git ls-files"
@@ -279,7 +236,7 @@
 
 (defn log [config date_arr]
   (def date_str (if (= (length date_arr) 0) "today" (string/join date_arr " ")))
-  (def parsed_date (parse_date date_str))
+  (def parsed_date (dateparser/parse-date date_str))
   (def doc_path (string "log/" parsed_date ".md"))
   (def doc_abs_path (path/join (config :wiki_dir) doc_path))
   (if (not (os/stat doc_abs_path)) (spit doc_abs_path (get-default-log-doc parsed_date)))
