@@ -15,7 +15,7 @@
   [date_str & today]
   (default today (date/today-local))
   (cond
-    (peg/match ~(* "today" -1) date_str) (date->iso8601 today))
+    (peg/match ~(* "today" -1) date_str) (date->iso8601 today)
     (peg/match ~(* "tomorrow" -1) date_str) (date->iso8601 (date/days-after-local 1 today))
     (peg/match ~(* "yesterday" -1) date_str) (date->iso8601 (date/days-ago-local 1 today))
     (peg/match ~(* (repeat 4 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) date_str
@@ -40,4 +40,4 @@
     # - last month
     # - in $x months
     # - $x months ago
-    (error (string "Could not parse date: " date_str)))
+    (error (string "Could not parse date: " date_str))))
