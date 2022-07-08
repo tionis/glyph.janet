@@ -29,9 +29,17 @@
     (fn [{:week-day wd} &opt frm]
       (default frm :short)
       (get-in week-days [frm wd]))
+    :str-week-day-long
+    (fn [{:week-day wd} &opt frm]
+      (default frm :long)
+      (get-in week-days [frm wd]))
     :str-month
     (fn [{:month m} &opt frm]
       (default frm :short)
+      (get-in months [frm m]))
+    :str-month-long
+    (fn [{:month m} &opt frm]
+      (default frm :long)
       (get-in months [frm m]))
     :local (fn [dt] (merge-into dt (os/date (os/mktime dt) true)))})
 
@@ -95,9 +103,12 @@
 
 (defn from-string [x] # TODO add week-day and year-day
   (merge
-    year-start
-    month-start
-    midnite ;(peg/match date-time-grammar x)
+    (os/date
+      (os/mktime (merge
+                    year-start
+                    month-start
+                    midnite
+                    ;(peg/match date-time-grammar x))))
     Date))
 
 (defn normalize [x]

@@ -3,6 +3,7 @@
 (import ./date)
 (import ./dateparser)
 (import jff/ui :prefix "jff/")
+#(use ./log-item) disabled due to being unfinished
 (use spork)
 
 # TODO
@@ -11,7 +12,6 @@
 # - add log item parser (not sure for what exactly but may be fun to implement and get more familiar with PEGs)
 # - add daemon that autocommits on change and pulls regularily to support non-cli workflows/editors
 # - think about using file locking to prevent conflicts
-# - prefill new log documents
 # - save which doc is currently being edited in cache or use file locks and only commit files not locked by other wiki processes
 # - add cal/calendar subcommand which provides an UI for choosing a day for log
 # - add lint subcommand that check for broken links etc across the wiki
@@ -48,8 +48,8 @@
 
 (defn get-default-log-doc [date_str]
   (def today (date/from-string date_str))
-  (string "# " date_str #" - " ((date/week-days :long) (today :week-day)) "\n"
-          #"[yesterday](" (:format (date/days-ago 1 today)) ") <--> [tomorrow](" (:format (date/days-after 1 today)) ")\n"
+  (string "# " date_str " - " ((date/week-days :long) (today :week-day)) "\n"
+          "[yesterday](" (:format (date/days-ago 1 today)) ") <--> [tomorrow](" (:format (date/days-after 1 today)) ")\n"
           "\n"
           "## ToDo\n"
           "\n"
@@ -131,45 +131,6 @@
           - log $optional_natural_date - edit a log for an optional date
           - sync - sync the repo
           - git $args - pass args thru to git`))
-
-# Notes
-# Log Item Syntax():
-# - [ ] optional_time | description
-# time syntax:
-# 13:00 = at 13:00
-# <13:00 = before 13:00
-# >13:00 = after 13:00
-# 12:00-13:00 = from 12:00 to 13:00
-# 12:00<t<13:00 = somewhen between 12:00 and 13:00
-# 12:00<<13:00 = somewhen between 12:00 and 13:00
-# each time can be followed by a space and a duration like so:
-# 13:00 P2h15m = start at 13:00 and do task for 2h and 15 min
-# 12:00<<13:00 P20m = task starts somewhere between 12:00 and 13:00 and needs 20 minutes
-
-# WARNING heave work in progress
-(defn parse-log-item-time [item-string &opt tdy]
-  (default tdy (date/today-local))
-  (cond
-    (peg/match ~(* :d :d ":" :d :d) item-string)
-      (let [components (string/split ":" ((peg/match ~(* (any " ") (capture (* :d :d ":" :d :d)) (any " ") -1) item-string) 0))
-            hours (scan-number (components 0))
-            minutes (scan-number (components 1))]
-            (def begin (merge tdy {:hours hours :minutes minutes :seconds 0}))
-            {:begin begin :duration :unknown :end :unknown :exact true})
-    (peg/match ~(* "<" :d :d ":" :d :d)) {:not :implemented}))
-
-(defn parse-log-item
-  "Parses a log item and outputs a struct describing the time period for task, its completeness status and its description"
-  [log-item-string &opt tdy]
-  (default tdy (date/today-local))
-  (def parsed (peg/match patt_log_item log-item-string))
-  (cond
-    (= (length parsed) 1) {:description (parsed 0)}
-    (= (length parsed) 2) (merge {:description (parsed 1)} (parse-log-item-time (parsed 0) tdy))
-    (error "Invalid log item")))
-  #TODO parse datetime string into following struct: {:from date_here :to date_here :duration duration_here_only_if_needed)}
-  #date_here can be :beginning_of_time :end_of_time a date struct formatted like (os/date)
-
 (defn print_command_help [] (print positional_args_help_string))
 
 (def argparse-params
