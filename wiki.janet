@@ -21,6 +21,7 @@
 # - think about possibility of integrating hyperlist for recipes, todos and the like
 # - add todo parser to show due tasks, show tasks by tag etc.
 # - take inspiration of wiki.fish script and allow fuzzy searching of all lines or implement a full text search -> needs jff preview
+# - think about adding contacts managment
 
 # Note for parsing git status porcellain:
 # ADDED:     = 'A'
@@ -258,6 +259,10 @@
   (commit config (string "wiki: moved " source " to " target))
   (git/async config "push"))
 
+(defn ls_command [config path]
+  (each file (get-files config (if (> (length path) 0) (string/join path " ") nil))
+    (print ((peg/match patt_without_md file) 0))))
+
 (defn main [_ & raw_args]
   (if (and (> (length raw_args) 0) (= (raw_args 0) "git")) # pass through calls to wiki git without parsing them for flags
       (os/exit (os/execute ["git" "-C" (os/getenv "WIKI_DIR") ;(slice raw_args 1 -1)] :p)))
@@ -282,7 +287,7 @@
   (match args
     ["help"] (print_command_help)
     ["search" & search_terms] (search config (string/join search_terms " "))
-    ["ls" & path] (each file (get-files config (if (> (length path) 0) (string/join path " ") nil)) (print file))
+    ["ls" & path] (ls_command config path)
     ["rm" file] (rm config file)
     ["rm"] (rm/interactive config)
     ["mv" source target] (mv config source target)
