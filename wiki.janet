@@ -20,6 +20,7 @@
 # - add server side subtree based wiki sharing
 # - think about possibility of integrating hyperlist for recipes, todos and the like
 # - add todo parser to show due tasks, show tasks by tag etc.
+# - take inspiration of wiki.fish script and allow fuzzy searching of all lines or implement a full text search -> needs jff preview
 
 # Note for parsing git status porcellain:
 # ADDED:     = 'A'
@@ -108,7 +109,8 @@
 (defn git/async [config & args]
   (def null_file (get-null-file))
   (def fout (os/open null_file :w))
-  (os/execute ["setsid" "-f" "git" "-C" (config :wiki_dir ) ;args] :p {:out fout}))
+  (def ferr (os/open null_file :w))
+  (os/execute ["setsid" "-f" "git" "-C" (config :wiki_dir ) ;args] :p {:out fout :err ferr}))
 
 (defn commit [config default_message]
   (if (not (config "no-commit"))
