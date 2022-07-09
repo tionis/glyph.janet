@@ -244,7 +244,12 @@
 (defn mv [config source target]
   (def source_path (path/join (config :wiki_dir) (string source ".md")))
   (def target_path (path/join (config :wiki_dir) (string target ".md")))
-  (pp source_path)
+  (def target_parent_dir (path/dirname target_path))
+  (if (not (os/stat target_parent_dir))
+    (do (prin "Creating parent directories for " target_path " ... ")
+        (flush)
+        (filesystem/create-directories target_parent_dir)
+        (print "Done.")))
   (git config "mv" source_path target_path)
   (git config "add" source_path)
   (git config "add" target_path)
