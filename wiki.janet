@@ -137,14 +137,22 @@
   [(string "A simple local cli wiki using git for synchronization\n"
            "for help with commands use --command_help")
    "wiki_dir" {:kind :option
+               :short "wd"
                :help "Manually set wiki_dir"}
    "command_help" {:kind :flag
+                   :short "ch"
                    :help "Prints command help"}
    "no_commit" {:kind :flag
+                :short "nc"
                 :help "Do not commit changes"}
+   "no_sync" {:kind :flag
+              :short "ns"
+              :help "Do not automatically sync repo in background (does not apply to manual sync)"}
    "no_pull" {:kind :flag
+              :short "np"
               :help "do not pull from repo"}
    "ask-commit-message" {:kind :flag
+                         :short "ac"
                          :help "ask for the commit message instead of auto generating one"}
    "cat" {:kind :flag
           :short "c"
@@ -187,7 +195,7 @@
 (defn rm [config file]
   (git config "rm" (string file ".md"))
   (commit config (string "wiki: deleted " file))
-  (git/async config "push"))
+  (if (config :sync) (git/async config "push")))
 
 (defn rm/interactive [config]
   (def file (file/select config))
@@ -213,7 +221,7 @@
           (= change_count 0) (do (print "No changes, not commiting..."))
           (= change_count 1) (do (git config "add" "-A") (commit config (string "wiki: updated " file)))
           (> change_count 1) (do (git config "add" "-A") (commit config (string "wiki: session from " file))))
-        (if (> change_count 0) (git/async config "push")))))
+        (if (> change_count 0) (if (config :sync)(git/async config "push"))))))
 
 (defn search [config query]
   (def found_files (filter |(peg/match patt_without_md $0)
@@ -254,7 +262,7 @@
   (git config "add" source_path)
   (git config "add" target_path)
   (commit config (string "wiki: moved " source " to " target))
-  (git/async config "push"))
+  (if (config :sync) (git/async config "push")))
 
 (defn ls_command [config path]
   (each file (get-files config (if (> (length path) 0) (string/join path " ") nil))
@@ -268,6 +276,9 @@
   (if (res "command_help") (do (print_command_help) (os/exit 0)))
   (def args (res :default))
   (def config @{})
+  (if (res "no_sync")
+    (put config :sync false)
+    (put config :sync true))
   (if (res "wiki_dir")
       (put config :wiki_dir (res "wiki_dir"))
       (if (os/getenv "WIKI_DIR")
@@ -278,9 +289,10 @@
       (if (os/getenv "EDITOR")
           (put config :editor (os/getenv "EDITOR"))
           (put config :editor "vim"))) # fallback to default editor
-  (if (and (not (res "no_pull"))
-           (not (= args @["sync"])))
-      (git/async config "pull"))
+  (if (config :sync)
+      (if (and (not (res "no_pull"))
+               (not (= args @["sync"]))) # ensure pull is not executed two times for manual sync
+          (git/async config "pull")))
   (match args
     ["help"] (print_command_help)
     ["search" & search_terms] (search config (string/join search_terms " "))
