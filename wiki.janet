@@ -49,7 +49,7 @@
 (defn get-default-log-doc [date_str]
   (def today (date/from-string date_str))
   (string "# " date_str " - " ((date/week-days :long) (today :week-day)) "\n"
-          "[yesterday](" (:format (date/days-ago 1 today)) ") <--> [tomorrow](" (:format (date/days-after 1 today)) ")\n"
+          "[yesterday](" (:date-format (date/days-ago 1 today)) ") <--> [tomorrow](" (:date-format (date/days-after 1 today)) ")\n"
           "\n"
           "## ToDo\n"
           "\n"
@@ -185,7 +185,7 @@
   (if selected (string selected ".md") selected))
 
 (defn rm [config file]
-  (git config "rm" file)
+  (git config "rm" (string file ".md"))
   (commit config (string "wiki: deleted " file))
   (git/async config "push"))
 

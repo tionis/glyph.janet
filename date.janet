@@ -51,6 +51,7 @@
         (string/format "%s %i:%.2i:%.2i"
                        (_format-date {:month m :year y :month-day d})
                        h u s))
+      :date-format _format-date
       :http-format
       (fn [self]
         (def {:month m :year y :month-day d :week-day wd
