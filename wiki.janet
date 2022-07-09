@@ -147,7 +147,7 @@
                 :help "Do not commit changes"}
    "no_sync" {:kind :flag
               :short "ns"
-              :help "Do not automatically sync repo in background (does not apply to manual sync)"}
+              :help "Do not automatically sync repo in background (does not apply to manual sync). This is enabled by default if $WIKI_NO_SYNC is set to \"true\""}
    "no_pull" {:kind :flag
               :short "np"
               :help "do not pull from repo"}
@@ -276,7 +276,7 @@
   (if (res "command_help") (do (print_command_help) (os/exit 0)))
   (def args (res :default))
   (def config @{})
-  (if (res "no_sync")
+  (if (or (res "no_sync") (= (os/getenv "WIKI_NO_SYNC") "true"))
     (put config :sync false)
     (put config :sync true))
   (if (res "wiki_dir")
@@ -284,6 +284,9 @@
       (if (os/getenv "WIKI_DIR")
           (put config :wiki_dir (os/getenv "WIKI_DIR"))
           (put config :wiki_dir (path/join (os/getenv "HOME") "wiki")))) # fallback to default directory
+  (if (not= ((os/stat (config :wiki_dir)) :mode) :directory)
+    (do (eprint "Wiki dir does not exist or is not a directory!")
+        (os/exit 1)))
   (if (res "cat")
       (put config :editor :cat)
       (if (os/getenv "EDITOR")
