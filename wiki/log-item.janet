@@ -12,6 +12,8 @@
 # 13:00 P2h15m = start at 13:00 and do task for 2h and 15 min
 # 12:00<<13:00 P20m = task starts somewhere between 12:00 and 13:00 and needs 20 minutes
 
+# TODO use duration.janet as inspiration to parse durations?
+
 # WARNING heavy work in progress
 (defn parse-log-item-time [item-string &opt tdy]
   (default tdy (date/today-local))

@@ -3,6 +3,7 @@
 (import ./date)
 (import ./dateparser)
 (import jff/ui :prefix "jff/")
+#(import ./yaml) # TODO write yaml library
 #(use ./log-item) disabled due to being unfinished
 (use spork)
 
@@ -20,6 +21,27 @@
 # - add todo parser to show due tasks, show tasks by tag etc.
 # - take inspiration of wiki.fish script and allow fuzzy searching of all lines or implement a full text search -> needs jff preview
 # - think about adding contacts managment
+# - add a nestable key value store using json files as backend to store arbitraty data (could for example be used to track progress in current books etc.)
+# - add wiki fixer that fixes common markdown linking mistakes done by e.g. obsidian
+# - add indexifier to transform from foo.md to foo/index.md (use mv method to also correct links (check them afterwards?)) (this may fail as index.md need special handling)
+# - when moving files also correct links
+# - use shlex grammar as inspiration for path/split peg grammar (this is needed for the new file move command implementation)
+
+# peg inspiration:
+# https://github.com/sogaiu/janet-peg-samples/blob/master/samples/andrewchambers/janet-shlex.janet
+# (def- grammar
+#    ~{
+#      :ws (set " \t\r\n")
+#      :escape (* "\\" (capture 1))
+#      :dq-string (accumulate (* "\""
+#                                (any (+ :escape (if-not "\"" (capture 1))))
+#                                "\""))
+#      :sq-string (accumulate (* "'" (any (if-not "'" (capture 1))) "'"))
+#      :token-char (+ :escape (* (not :ws) (capture 1)))
+#      :token (accumulate (some :token-char))
+#      :value (* (any (+ :ws)) (+ :dq-string :sq-string :token) (any :ws))
+#      :main (any :value)
+#      })
 
 # old hack as workaround https://github.com/janet-lang/janet/issues/995 is solved
 # will keep this here for future reference
@@ -27,9 +49,11 @@
 #(ffi/defbind setpgid :int [pid :int pgid :int])
 #(ffi/defbind getpgid :int [pid :int])
 
-(def patt_without_md (peg/compile '{:main (* (capture (any (* (not ".md") 1))) ".md" -1)}))
+(def patt_without_md (peg/compile ~(* (capture (any (* (not ".md") 1))) ".md" -1)))
 
 (def patt_git_status_line (peg/compile ~(* " " (capture 1) " " (capture (some 1)))))
+
+(def patt_yaml_header (peg/compile ~(* "---\n" (capture (any (* (not "\n---\n") 1))) "\n---\n")))
 
 (def patt_log_item (peg/compile ~(* (any (+ "\t" " "))
                                     "- [ ] "
@@ -129,6 +153,8 @@
           - mv $source $target - move document from $source to $target
           - search $search_term - search using a regex
           - log $optional_natural_date - edit a log for an optional date
+          - lint $optional_paths - lint whole wiki or a list of paths
+          - graph - show a graph of the wiki
           - sync - sync the repo
           - git $args - pass args thru to git`))
 (defn print_command_help [] (print positional_args_help_string))
@@ -249,7 +275,7 @@
   (os/execute ["git" "-C" (config :wiki_dir) "pull"] :p)
   (os/execute ["git" "-C" (config :wiki_dir) "push"] :p))
 
-(defn mv [config source target]
+(defn mv [config source target] # TODO also fix links so they still point at the original targets
   (def source_path (path/join (config :wiki_dir) (string source ".md")))
   (def target_path (path/join (config :wiki_dir) (string target ".md")))
   (def target_parent_dir (path/dirname target_path))
@@ -263,6 +289,22 @@
   (git config "add" target_path)
   (commit config (string "wiki: moved " source " to " target))
   (if (config :sync) (git/async config "push")))
+
+(defn graph [config args]
+  (match graph))
+
+(defn check_links [config]
+  # TODO implement this
+  )
+
+(defn check_link [config path]
+  # TODO implement this
+  )
+
+(defn lint [config paths]
+  (if (= (length paths) 0)
+      (each p paths (check_link config p))
+      (check_links config)))
 
 (defn ls_command [config path]
   (each file (get-files config (if (> (length path) 0) (string/join path " ") nil))
@@ -305,6 +347,8 @@
     ["mv" source target] (mv config source target)
     ["log" & date_arr] (log config date_arr)
     ["sync"] (sync config)
+    ["lint" & paths] (lint config paths)
+    ["graph" & args] (graph config args)
     [file] (edit config (string file ".md"))
     nil (edit/interactive config)
     _ (print "Invalid syntax!")))
