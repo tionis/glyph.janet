@@ -3,12 +3,13 @@
 (import ./date)
 (import ./dateparser)
 (import jff/ui :prefix "jff/")
-#(import ./yaml) # TODO write yaml library
+#(import yaml) # TODO write yaml library
+(import ./markdown :as "md")
 #(use ./log-item) disabled due to being unfinished
 (use spork)
 
 # TODO
-# - add preview for file selector
+# - add preview for file selector -> requires changes in jff
 # - finish date parser
 # - add log item parser (not sure for what exactly but may be fun to implement and get more familiar with PEGs)
 # - add daemon that autocommits on change and pulls regularily to support non-cli workflows/editors
@@ -23,6 +24,7 @@
 # - think about adding contacts managment
 # - add a nestable key value store using json files as backend to store arbitraty data (could for example be used to track progress in current books etc.)
 # - add wiki fixer that fixes common markdown linking mistakes done by e.g. obsidian
+#   - fix .md suffix in links -> after editing go over file and ensure all local links are valid and refer to full file name with the .md suffix
 # - add indexifier to transform from foo.md to foo/index.md (use mv method to also correct links (check them afterwards?)) (this may fail as index.md need special handling)
 # - when moving files also correct links
 # - use shlex grammar as inspiration for path/split peg grammar (this is needed for the new file move command implementation)
@@ -55,10 +57,15 @@
 
 (def patt_yaml_header (peg/compile ~(* "---\n" (capture (any (* (not "\n---\n") 1))) "\n---\n")))
 
+(def patt_md_without_yaml (peg/compile ~(* (opt (* "---\n" (any (* (not "\n---\n") 1)) "\n---\n")) (capture (* (any 1))))))
+
 (def patt_log_item (peg/compile ~(* (any (+ "\t" " "))
                                     "- [ ] "
                                     (capture (any (* (not " | ") 1)))
                                     (opt (* " | " (capture (any 1)))))))
+
+(defn dprint [x]
+  (printf "%M" x))
 
 (defn get-null-file []
   (case (os/which)
@@ -131,6 +138,7 @@
 # TODO remove dependency to setsid
 # maybe use c wrapper and c code as seen here:
 # https://man7.org/tlpi/code/online/book/daemons/become_daemon.c.html
+# this may be blocked until https://github.com/janet-lang/janet/issues/995 is solved
 (defn git/async [config & args]
   (def null_file (get-null-file))
   (def fout (os/open null_file :w))
@@ -276,6 +284,7 @@
   (os/execute ["git" "-C" (config :wiki_dir) "push"] :p))
 
 (defn mv [config source target] # TODO also fix links so they still point at the original targets
+  # extract links, split them, url-decode each element, change them according to the planned movement, url encode each element, combine them, read the file into string, replace ](old_url) with ](new_url) in the string, write file to new location, delete old file
   (def source_path (path/join (config :wiki_dir) (string source ".md")))
   (def target_path (path/join (config :wiki_dir) (string target ".md")))
   (def target_parent_dir (path/dirname target_path))
@@ -290,21 +299,97 @@
   (commit config (string "wiki: moved " source " to " target))
   (if (config :sync) (git/async config "push")))
 
+(defn get-content-without-header [path] ((peg/match patt_md_without_yaml (slurp path)) 0))
+
+(defn get-links [config path]
+  (md/get-links (get-content-without-header (path/join (config :wiki_dir) path))))
+
+(defn dot/encode [adj]
+  (var ret @"digraph wiki {\n")
+  (eachk k adj
+    (if (= (length (adj k)) 0)
+      (buffer/push ret "  \"" k "\"\n")
+      (buffer/push ret "  \"" k "\" -> \"" (string/join (adj k) "\", \"") "\"\n")))
+  (buffer/push ret "}"))
+
+(defn blockdiag/encode [adj]
+  (var ret @"")
+  (eachk k adj
+    (if (= (length (adj k)) 0)
+      (buffer/push ret "\"" k "\"\n")
+      (buffer/push ret "\"" k "\" -> \"" (string/join (adj k) "\", \"") "\"\n")))
+  ret)
+
+(defn mermaid/encode [adj]
+  (var ret @"graph TD\n")
+  (def id @{})
+  (var num 0)
+  (eachk k adj
+    (put id k num)
+    (+= num 1))
+  (eachk k adj
+    (if (= (length (adj k)) 0)
+        (buffer/push ret "  " (id k) "[" k "]\n"))
+    (each l (adj k)
+      (buffer/push ret "  " (id k) "[" k "] --> " (id l) "\n")))
+  ret)
+
+(defn is-local-link? [link]
+  true
+  # TODO return true if link is a local link and not web link or absolute link
+  )
+
+(defn get-graph
+  "returns a graph describing the wiki using a adjacency list implemented with a map"
+  [config]
+  (def adj @{})
+  (each file (get-files config)
+    (put adj file @[])
+    (let [links (filter is-local-link? (get-links config file))]
+      (each link links
+        (array/push (adj file) (link :target)))))
+  adj)
+
+(defn graph-gtk
+  "use local graphviz install to render the wiki graph"
+  [config]
+  (def streams (os/pipe))
+  (ev/write (streams 1) (dot/encode (get-graph config)))
+  (def null_file (get-null-file))
+  (def fout (os/open null_file :w))
+  (def ferr (os/open null_file :w))
+  (prin "Starting Interface... ") (flush)
+  (os/execute ["setsid" "-f" "dot" "-Tgtk"] :p {:in (streams 0) :out fout :err ferr})
+  (print "Done."))
+
 (defn graph [config args]
-  (match graph))
+  (match args
+    ["graphical"] (graph-gtk config)
+    ["dot"] (print (dot/encode (get-graph config)))
+    ["blockdiag"] (print (blockdiag/encode (get-graph config)))
+    ["mermaid"] (print (mermaid/encode (get-graph config)))
+    [] (graph-gtk config)
+    _ (do (eprint "Unknown command")
+          (os/exit 1))))
 
-(defn check_links [config]
+(defn check_links [config path]
   # TODO implement this
-  )
+  (def broken_links @[])
+  (def links (filter is-local-link? (get-links config path))) # TODO ensure that image links are also checked in some way
+  (each link links
+    (if (not= ((os/stat (string (path/join path (link :target))))) :mode) :file)
+        (array/push broken_links link))
+  broken_links)
 
-(defn check_link [config path]
-  # TODO implement this
-  )
+(defn check_all_links [config]
+  (each file (get-files config)
+    (let [result (check_links config file)]
+         (if (> (length result) 0)
+             (do (eprint "Error in " file "")
+                 (prin) (pp result))))))
 
 (defn lint [config paths]
-  (if (= (length paths) 0)
-      (each p paths (check_link config p))
-      (check_links config)))
+  (check_all_links config))
 
 (defn ls_command [config path]
   (each file (get-files config (if (> (length path) 0) (string/join path " ") nil))
