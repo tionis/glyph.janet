@@ -37,4 +37,3 @@
     (error "Invalid log item")))
   #TODO parse datetime string into following struct: {:from date_here :to date_here :duration duration_here_only_if_needed)}
   #date_here can be :beginning_of_time :end_of_time a date struct formatted like (os/date)
-

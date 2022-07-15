@@ -10,7 +10,18 @@
                                                 "-" 
                                                 (to_two_digit_string (+ (date_to_transform :month-day) 1))))
 
-(defn parse-date
+(def week-days-long (map string/ascii-lower (date/week-days :long)))
+(def week-days-short (map string/ascii-lower (date/week-days :short)))
+
+(def get-day-num ((fn []
+                   (def ret @{})
+                   (loop [i :range [0 (length week-days-long)]]
+                     (put ret (week-days-long i) i))
+                   (loop [i :range [0 (length week-days-short)]]
+                     (put ret (week-days-short i) i))
+                   (table/to-struct ret))))
+
+(defn parse-date # TODO precompile PEGs
   "consumes a date in some semi-natural syntax and returns a struct formatted like {:year :month :day :year-day :month-day :week-day}"
   [date_str &opt today]
   (default today (date/today-local))
@@ -32,14 +43,28 @@
            (:date-format (date/days-after-local days_after today)))
     (peg/match ~(* "next week" -1) date_str) (:date-format (date/days-after-local 7 today))
     (peg/match ~(* "last week" -1) date_str) (:date-format (date/days-ago-local 7 today))
-    # TODO
-    # - $weekday (this week)
-    # - $x weeks ago
-    # - in $x weeks
-    # - last $week_day
-    # - next $week_day
-    # - next month
-    # - last month
-    # - in $x months
-    # - $x months ago
+    (peg/match ~(* "next month" -1) date_str) (:date-format (date/months-after 1 today))
+    (peg/match ~(* "last month" -1) date_str) (:date-format (date/months-ago 1 today))
+    (peg/match ~(* (some :d) " months ago" -1) date_str)
+      (:date-format (date/months-ago (scan-number ((peg/match ~(* (capture (any :d)) " months ago" -1) date_str) 0)) today))
+    (peg/match ~(* "in " (some :d) " months" -1) date_str)
+      (:date-format (date/months-ago (scan-number ((peg/match ~(* "in " (capture (any :d)) " months" -1) date_str) 0)) today))
+    (peg/match ~(+ ,;week-days-short ,;week-days-long) date_str)
+      (:date-format (merge today {:week-day (get-day-num date_str)}))
+    (peg/match ~(* (some :d) " weeks ago") date_str)
+      (:date-format (date/weeks-ago (scan-number ((peg/match ~(* (capture (some :d)) " weeks ago") date_str) 0)) today))
+    (peg/match ~(* "in " (some :d) " weeks ago") date_str)
+      (:date-format (date/weeks-ago (scan-number ((peg/match ~(* "in " (capture (some :d)) " weeks") date_str) 0)) today))
+    (peg/match ~(* "last " (+ ,;week-days-short ,;week-days-long)) date_str)
+      (:date-format (date/last-weekday
+                      (get-day-num (scan-number ((peg/match 
+                                                    ~(* "last " (capture (+ ,;week-days-short ,;week-days-long)))
+                                                    date_str) 0)))
+                      today))
+    (peg/match ~(* "next " (+ ,;week-days-short ,;week-days-long)) date_str)
+      (:date-format (date/next-weekday
+                      (get-day-num (scan-number ((peg/match
+                                                   ~(* "next " (capture (+ ,;week-days-short ,;week-days-long)))
+                                                    date_str) 0)))
+                      today))
     (error (string "Could not parse date: " date_str))))

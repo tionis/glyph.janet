@@ -2,49 +2,12 @@
 (import ./filesystem)
 (import ./date)
 (import ./dateparser)
+(import uri)
 (import jff/ui :prefix "jff/")
 #(import yaml) # TODO write yaml library
 (import ./markdown :as "md")
 #(use ./log-item) disabled due to being unfinished
 (use spork)
-
-# TODO
-# - add tests for functions without side effects (shouldn't be that many)
-# - add preview for file selector -> requires changes in jff
-# - finish date parser
-# - add log item parser (not sure for what exactly but may be fun to implement and get more familiar with PEGs)
-# - add daemon that autocommits on change and pulls regularily to support non-cli workflows/editors
-# - think about using file locking to prevent conflicts
-# - save which doc is currently being edited in cache or use file locks and only commit files not locked by other wiki processes
-# - add cal/calendar subcommand which provides an UI for choosing a day for log
-# - add lint subcommand that check for broken links etc across the wiki
-# - add server side subtree based wiki sharing
-# - think about possibility of integrating hyperlist for recipes, todos and the like
-# - add todo parser to show due tasks, show tasks by tag etc.
-# - take inspiration of wiki.fish script and allow fuzzy searching of all lines or implement a full text search -> needs jff preview
-# - think about adding contacts managment
-# - add a nestable key value store using json files as backend to store arbitraty data (could for example be used to track progress in current books etc.)
-# - add wiki fixer that fixes common markdown linking mistakes done by e.g. obsidian
-#   - fix .md suffix in links -> after editing go over file and ensure all local links are valid and refer to full file name with the .md suffix
-# - add indexifier to transform from foo.md to foo/index.md (use mv method to also correct links (check them afterwards?)) (this may fail as index.md need special handling)
-# - when moving files also correct links
-# - use shlex grammar as inspiration for path/split peg grammar (this is needed for the new file move command implementation)
-
-# peg inspiration:
-# https://github.com/sogaiu/janet-peg-samples/blob/master/samples/andrewchambers/janet-shlex.janet
-# (def- grammar
-#    ~{
-#      :ws (set " \t\r\n")
-#      :escape (* "\\" (capture 1))
-#      :dq-string (accumulate (* "\""
-#                                (any (+ :escape (if-not "\"" (capture 1))))
-#                                "\""))
-#      :sq-string (accumulate (* "'" (any (if-not "'" (capture 1))) "'"))
-#      :token-char (+ :escape (* (not :ws) (capture 1)))
-#      :token (accumulate (some :token-char))
-#      :value (* (any (+ :ws)) (+ :dq-string :sq-string :token) (any :ws))
-#      :main (any :value)
-#      })
 
 # old hack as workaround https://github.com/janet-lang/janet/issues/995 is solved
 # will keep this here for future reference
@@ -155,8 +118,8 @@
 (defn commit
   "commit staged files, ask user based on config for message, else fallback to default_message"
   [config default_message]
-  (if (not (config "no-commit"))
-      (if (config "ask-commit-message")
+  (if (not (get-in config [:argparse "no-commit"]))
+      (if (get-in config [:argparse "ask-commit-message"])
         (do (prin "Commit Message: ")
             (git config "commit" "-m" (file/read stdin :line)))
         (git config "commit" "-m" default_message))))
@@ -246,7 +209,7 @@
 
 (defn rm
   "delete doc specified by path"
-  [config file] # TODO check via graph what links are broken by that and warn user, ask them if they still want to continue (do not ask if (config :force) is true)
+  [config file] # TODO check via graph what links are broken by that and warn user, ask them if they still want to continue (do not ask if (get-in config [:argparse "force"]) is true)
   (git config "rm" (string file ".md"))
   (commit config (string "wiki: deleted " file))
   (if (config :sync) (git/async config "push")))
@@ -446,8 +409,11 @@
 
 (defn lint
   "lint whole wiki specified by config"
-  [config]
-  (check_all_links config))
+  [config paths]
+  (if (> (length paths) 0)
+      (each path paths
+         (check_links config path))
+      (check_all_links config)))
 
 (defn ls_command
   "list all files to stdout starting from path in wiki specified by config"
@@ -463,6 +429,7 @@
   (if (res "command_help") (do (print_command_help) (os/exit 0)))
   (def args (res :default))
   (def config @{})
+  (put config :argparse res)
   (if (or (res "no_sync") (= (os/getenv "WIKI_NO_SYNC") "true"))
     (put config :sync false)
     (put config :sync true))
@@ -474,7 +441,6 @@
   (if (not= ((os/stat (config :wiki_dir)) :mode) :directory)
     (do (eprint "Wiki dir does not exist or is not a directory!")
         (os/exit 1)))
-  (if (res "force") (put config :force true))
   (if (res "cat")
       (put config :editor :cat)
       (if (os/getenv "EDITOR")

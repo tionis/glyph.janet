@@ -328,14 +328,22 @@
 (defn last-week-start [&opt tdy]
   (start-of-week -1 tdy))
 
-(defn months-ago [n &opt tdy] # TODO fix months in future (positive numbers)
-  (default tdy (today))
+(defn months-ago [n &opt tdy]
+  (default tdy (today)) # TODO fix this and add months-after
   (var ds (tdy :month-day))
   (var me (:sooner (make-calendar (merge tdy month-start)) (days 1)))
-  (for i 0 (- n)
+  (for i 0 n
     (+= ds (inc (me :month-day)))
     (set me (:sooner (make-calendar (merge me month-start)) (days 1))))
   (days-ago ds tdy))
+
+(defn months-after [n &opt tdy]
+  # TODO implement this
+  )
+
+(def date/last-weekday [n &opt tdy])
+
+(def date/next-weekday [n &opt tdy])
 
 (defn- set-month-start [d]
   (merge d month-start))
