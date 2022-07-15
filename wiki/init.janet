@@ -1,13 +1,13 @@
 #!/bin/env janet
-(import ./filesystem)
-(import ./date)
-(import ./dateparser)
-(import uri)
-(import jff/ui :prefix "jff/")
-#(import yaml) # TODO write yaml library
-(import ./markdown :as "md")
-#(use ./log-item) disabled due to being unfinished
 (use spork)
+(import uri)
+(import ./date)
+#(use ./log-item) # disabled due to being unfinished
+(import ./dateparser)
+(import fzy :as "fzy")
+(import jff/ui :as "jff")
+(import ./markdown :as "md")
+(import ./filesystem :as "fs")
 
 # old hack as workaround https://github.com/janet-lang/janet/issues/995 is solved
 # will keep this here for future reference
@@ -25,7 +25,7 @@
   (peg/compile ~(* "---\n" (capture (any (* (not "\n---\n") 1))) "\n---\n")))
 
 (def patt_md_without_yaml "PEG-Pattern that captures the content of a markdown file without the yaml header"
-  (peg/compile ~(* (opt (* "---\n" (any (* (not "\n---\n") 1)) "\n---\n")) (capture (* (any 1))))))
+  (peg/compile ~(* (opt (* "---\n" (any (* (not "\n---\n") 1)) "\n---\n" (opt "\n"))) (capture (* (any 1))))))
 
 (defn dprint "print x formatted like in the repl" [x]
   (printf "%M" x))
@@ -59,13 +59,13 @@
         (if name
             (each item2 items
               (if (= item2 (name 0))
-                  (do (filesystem/copy-file item (path/join "name" "index.md"))
+                  (do (fs/copy-file item (path/join "name" "index.md"))
                       (os/rm item)))))))))
 
 (defn indexify_dirs_recursivly
   "transform dirs recursivly to index.md based md structure starting at path"
   [path]
-  (filesystem/scan-directory path (fn [x]
+  (fs/scan-directory path (fn [x]
                                     (if (= ((os/stat x) :mode) :directory)
                                         (indexify_dir x)))))
 
@@ -189,7 +189,7 @@
       p
       (map |((peg/match ~(* ,p (? (+ "/" "\\")) (capture (any 1))) $0) 0)
             (filter |(peg/match patt_without_md $0)
-                    (filesystem/list-all-files p)))))
+                    (fs/list-all-files p)))))
   #(peg/match ls-files-peg (string (git config "ls-files")) "\n"))
   # - maybe use git ls-files as it is faster?
   # - warning: ls-files does not print special chars but puts the paths between " and escapes the special chars
@@ -230,7 +230,7 @@
   (if (not (os/stat parent_dir))
     (do (prin "Creating parent directories for " file " ... ")
         (flush)
-        (filesystem/create-directories parent_dir)
+        (fs/create-directories parent_dir)
         (print "Done.")))
   (if (= (config :editor) :cat)
       (print (slurp file_path))
@@ -288,7 +288,7 @@
   (if (not (os/stat target_parent_dir))
     (do (prin "Creating parent directories for " target_path " ... ")
         (flush)
-        (filesystem/create-directories target_parent_dir)
+        (fs/create-directories target_parent_dir)
         (print "Done.")))
   (git config "mv" source_path target_path)
   (git config "add" source_path)

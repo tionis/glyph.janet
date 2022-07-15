@@ -3,6 +3,7 @@
   :description "wiki/knowledgebase managment program"
   #:lflags ["-static"]
   :dependencies  ["https://git.sr.ht/~pepe/jff.git"
+                  "https://git.sr.ht/~pepe/jfzy"
                   "https://github.com/janet-lang/spork"
                   "https://github.com/tionis/remarkable"
                   #"https://tasadar.net/tionis/yaml.janet"
