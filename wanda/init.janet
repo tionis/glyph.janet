@@ -236,7 +236,7 @@
       (print (slurp file_path))
       (do
         (os/execute [(config :editor) file_path] :p)
-        (def change_count (length (string/split "\n" (string/trim (git config "status" "--porcelain=v1")))))
+        (def change_count (length (get_changes config)))
         # TODO smarter commit
         (cond
           (= change_count 0) (do (print "No changes, not commiting..."))
@@ -438,9 +438,10 @@
       (if (os/getenv "WIKI_DIR")
           (put config :wiki_dir (os/getenv "WIKI_DIR"))
           (put config :wiki_dir (path/join (os/getenv "HOME") "wiki")))) # fallback to default directory
-  (if (not= ((os/stat (config :wiki_dir)) :mode) :directory)
-    (do (eprint "Wiki dir does not exist or is not a directory!")
-        (os/exit 1)))
+  (let [wiki_dir_stat (os/stat (config :wiki_dir))]
+    (if (or (nil? wiki_dir_stat) (not= (wiki_dir_stat :mode) :directory))
+        (do (eprint "Wiki dir does not exist or is not a directory!")
+            (os/exit 1))))
   (if (res "cat")
       (put config :editor :cat)
       (if (os/getenv "EDITOR")
