@@ -1,5 +1,5 @@
 (declare-project
-  :name "wiki"
+  :name "wanda"
   :description "wiki/knowledgebase managment program"
   #:lflags ["-static"]
   :dependencies  ["https://git.sr.ht/~pepe/jff.git"
@@ -9,13 +9,13 @@
                   #"https://tasadar.net/tionis/yaml.janet"
                   "https://github.com/andrewchambers/janet-uri"])
 
-(declare-source :source ["wiki"])
+(declare-source :source ["wanda"])
 
 #(declare-native
   # :name "some-lib"
   # :source ["some-lib.c"])
 
 (declare-executable
-  :name "wiki"
-  :entry "wiki/init.janet"
+  :name "wanda"
+  :entry "wanda/init.janet"
   :install true)
