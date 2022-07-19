@@ -19,7 +19,7 @@
   (peg/compile ~(* (capture (any (* (not ".md") 1))) ".md" -1)))
 
 (def patt_git_status_line "PEG-Pattern that parsed one line of git status --porcellain=v1 into a tuple of changetype and filename"
-  (peg/compile ~(* " " (capture 1) " " (capture (some 1)))))
+  (peg/compile ~(* (opt " ") (capture (between 1 2 (* (not " ") 1))) " " (capture (some 1)))))
 
 (def patt_yaml_header "PEG-Pattern that captures the content of a yaml header in a markdown file"
   (peg/compile ~(* "---\n" (capture (any (* (not "\n---\n") 1))) "\n---\n")))
@@ -92,7 +92,8 @@
    "I" :ignored
    "?" :untracked
    "T" :typechange
-   "X" :unreadable})
+   "X" :unreadable
+   "??" :unknown})
 
 (defn get_changes
   "give a config get the changes in the working tree of the git repo"
@@ -121,7 +122,10 @@
   (if (not (get-in config [:argparse "no-commit"]))
       (if (get-in config [:argparse "ask-commit-message"])
         (do (prin "Commit Message: ")
-            (git config "commit" "-m" (file/read stdin :line)))
+            (def message (string/trim (file/read stdin :line)))
+            (if (= message "")
+                (git config "commit" "-m" default_message)
+                (git config "commit" "-m" )))
         (git config "commit" "-m" default_message))))
 
 (def positional_args_help_string
