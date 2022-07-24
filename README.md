@@ -1,6 +1,12 @@
-# Wiki.janet
-This is a helper script/program to manage personal wiki-style knowledgebases.  
-It is kind of a commandline equivalent of Obsidian or can also be seen as a wrapper for for example vimwiki and uses git for syncing of different machines as well as versioning of the documents.  
+<style>
+r { color: Red }
+o { color: Orange }
+g { color: Green }
+</style>
+# Wanda
+Wanda (<r>W</r>iki <r>AND</r> <r>A</r>rchive) is a knowledgebase helper that help you to manage a personal wiki and also manage an archive of other data.  
+The Wiki part of this application is kind of a commandline equivalent of Obsidian or can also be seen as a wrapper for other wiki helpers like vimwiki and uses git for syncing of different machines as well as versioning of the documents.  
+For the Archive part of this application it adds a few wrappers for downloading and managing data (extendable by user scripts) as well as a way to synchronize the data alongside the wiki without checking them directly into git. (Not yet implemented).
 
 At the moment the program incorporates code from other projects that I want to attribute below:
 - [Spork](https://github.com/janet-lang/spork)
