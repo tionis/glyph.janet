@@ -425,9 +425,10 @@
   (each file (get-files config (if (> (length path) 0) (string/join path " ") nil))
     (print ((peg/match patt_without_md file) 0))))
 
-(defn main [_ & raw_args]
-  (if (and (> (length raw_args) 0) (= (raw_args 0) "git")) # pass through calls to wiki git without parsing them for flags
-      (os/exit (os/execute ["git" "-C" (os/getenv "WIKI_DIR") ;(slice raw_args 1 -1)] :p)))
+(defn cli/archive []
+  (error "To be implemented"))
+
+(defn cli/wiki []
   (def res (argparse/argparse ;argparse-params))
   (unless res (os/exit 1)) # exit with error if the arguments cannot be parsed
   (if (res "command_help") (do (print_command_help) (os/exit 0)))
@@ -469,3 +470,22 @@
     [file] (edit config (string file ".md"))
     nil (edit/interactive config)
     _ (print "Invalid syntax!")))
+
+(defn main [_ & raw_args]
+  # extract args before subcommand (archive/git/wiki) (deprecated use env variables for that)
+  (def subcommand (if (= (length raw_args) 0) nil (raw_args 0)))
+  (setdyn :args (slice raw_args 1 -1))
+  (case subcommand
+    "archive" (cli/archive)
+    "git" (os/exit
+            (os/execute ["git"
+                         "-C"
+                         (let [wiki_dir (os/getenv "WIKI_DIR")
+                               stat (os/stat wiki_dir)]
+                           (if (or (not stat) (not= (stat :mode) :directory))
+                               (error "$WIKI_DIR doesn't exist or is not a directory")
+                               wiki_dir))
+                         ;(slice raw_args 1 -1)] :p))
+    "wiki" (cli/wiki)
+    (do (eprint "Unknown subsystem")
+        (os/exit 1))))
