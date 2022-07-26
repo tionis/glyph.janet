@@ -471,10 +471,10 @@
     nil (edit/interactive config)
     _ (print "Invalid syntax!")))
 
-(defn main [_ & raw_args]
+(defn main [myself & raw_args]
   # extract args before subcommand (archive/git/wiki) (deprecated use env variables for that)
   (def subcommand (if (= (length raw_args) 0) nil (raw_args 0)))
-  (setdyn :args (slice raw_args 1 -1))
+  (setdyn :args @[myself ;(slice raw_args 1 -1)])
   (case subcommand
     "archive" (cli/archive)
     "git" (os/exit
