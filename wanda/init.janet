@@ -506,7 +506,8 @@
                 (git git-conf "add" ".wanda/config.jdn")
                 (git git-conf "commit" "-m" "wanda: initialized config"))
             (try (set root-conf (parse (slurp root-conf-path)))
-                 ([err] (eprint "Could not load wanda config: " err)))))
+                 ([err] (eprint "Could not load wanda config: " err)
+                        (os/exit 1)))))
   (def subcommand (if (= (length raw_args) 0)
                     nil
                     (do (setdyn :args @[myself ;(slice raw_args 1 -1)])
