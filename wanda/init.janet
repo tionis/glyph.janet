@@ -50,6 +50,18 @@
           "\n"
           "## Notes\n"))
 
+
+(defn home []
+  (def p (os/getenv "HOME"))
+  (if (or (not p) (= p ""))
+      (let [userprofile (os/getenv "USERPROFILE")]
+           (if (or (not userprofile) (= userprofile ""))
+               (error "Could not determine home directory")
+               userprofile))
+      p))
+
+(defn get-default-arch-dir [] (path/join (home) "arch"))
+
 (defn indexify_dir
   "transform given dir to index.md based md structure"
   [path]
@@ -80,7 +92,7 @@
 (defn git
   "given a config and some arguments execute the git subcommand on wiki"
   [config & args]
-  (shell-out ["git" "-C" (config :wiki_dir) ;args]))
+  (shell-out ["git" "-C" (config :arch-dir) ;args]))
 
 (def git_status_codes
   "a map describing the meaning of the git status --porcellain=v1 short codes"
@@ -114,7 +126,7 @@
   (def null_file (get-null-file))
   (def fout (os/open null_file :w))
   (def ferr (os/open null_file :w))
-  (os/execute ["setsid" "-f" "git" "-C" (config :wiki_dir ) ;args] :p {:out fout :err ferr}))
+  (os/execute ["setsid" "-f" "git" "-C" (config :arch-dir ) ;args] :p {:out fout :err ferr}))
 
 (defn commit
   "commit staged files, ask user based on config for message, else fallback to default_message"
@@ -188,7 +200,7 @@
   "given a config and optional path to begin list all documents in wiki (not assets, only documents)"
   [config &opt path]
   (default path "")
-  (def p (path/join (config :wiki_dir) path))
+  (def p (path/join (config :wiki-dir) path))
   (if (= ((os/stat p) :mode) :file)
       p
       (map |((peg/match ~(* ,p (? (+ "/" "\\")) (capture (any 1))) $0) 0)
@@ -229,7 +241,7 @@
 (defn edit
   "edit document specified by path using config as base"
   [config file]
-  (def file_path (path/join (config :wiki_dir) file))
+  (def file_path (path/join (config :wiki-dir) file))
   (def parent_dir (path/dirname file_path))
   (if (not (os/stat parent_dir))
     (do (prin "Creating parent directories for " file " ... ")
@@ -272,22 +284,22 @@
   (def date_str (if (= (length date_arr) 0) "today" (string/join date_arr " ")))
   (def parsed_date (dateparser/parse-date date_str))
   (def doc_path (string "log/" parsed_date ".md"))
-  (def doc_abs_path (path/join (config :wiki_dir) doc_path))
+  (def doc_abs_path (path/join (config :wiki-dir) doc_path))
   (if (not (os/stat doc_abs_path)) (spit doc_abs_path (get-default-log-doc parsed_date)))
   (edit config doc_path))
 
 (defn sync
   "synchronize wiki specified by config synchroniously"
   [config]
-  (os/execute ["git" "-C" (config :wiki_dir) "pull"] :p)
-  (os/execute ["git" "-C" (config :wiki_dir) "push"] :p))
+  (os/execute ["git" "-C" (config :arch-dir) "pull"] :p)
+  (os/execute ["git" "-C" (config :arch-dir) "push"] :p))
 
 (defn mv
   "move document from source to target path while also changing links linking to it"
   [config source target] # TODO also fix links so they still point at the original targets
   # extract links, split them, url-decode each element, change them according to the planned movement, url encode each element, combine them, read the file into string, replace ](old_url) with ](new_url) in the string, write file to new location, delete old file
-  (def source_path (path/join (config :wiki_dir) (string source ".md")))
-  (def target_path (path/join (config :wiki_dir) (string target ".md")))
+  (def source_path (path/join (config :wiki-dir) (string source ".md")))
+  (def target_path (path/join (config :wiki-dir) (string target ".md")))
   (def target_parent_dir (path/dirname target_path))
   (if (not (os/stat target_parent_dir))
     (do (prin "Creating parent directories for " target_path " ... ")
@@ -307,7 +319,7 @@
 (defn get-links
   "get all links from document specified by path"
   [config path]
-  (md/get-links (get-content-without-header (path/join (config :wiki_dir) path))))
+  (md/get-links (get-content-without-header (path/join (config :wiki-dir) path))))
 
 (defn graph/json
   "get json encoding of graph"
@@ -425,10 +437,10 @@
   (each file (get-files config (if (> (length path) 0) (string/join path " ") nil))
     (print ((peg/match patt_without_md file) 0))))
 
-(defn cli/archive []
+(defn cli/archive [arch-dir root-conf]
   (error "To be implemented"))
 
-(defn cli/wiki []
+(defn cli/wiki [arch-dir root-conf]
   (def res (argparse/argparse ;argparse-params))
   (unless res (os/exit 1)) # exit with error if the arguments cannot be parsed
   (if (res "command_help") (do (print_command_help) (os/exit 0)))
@@ -439,11 +451,11 @@
     (put config :sync false)
     (put config :sync true))
   (if (res "wiki_dir")
-      (put config :wiki_dir (res "wiki_dir"))
-      (if (os/getenv "WIKI_DIR")
-          (put config :wiki_dir (os/getenv "WIKI_DIR"))
-          (put config :wiki_dir (path/join (os/getenv "HOME") "wiki")))) # fallback to default directory
-  (let [wiki_dir_stat (os/stat (config :wiki_dir))]
+      (do (put config :wiki-dir (res "wiki_dir"))
+          (put config :arch-dir (string/trim (shell-out ["git" "-C" (config :wiki-dir) "rev-parse" "--show-toplevel"]))))
+      (do (put config :wiki-dir (path/join arch-dir (root-conf :wiki-dir)))
+          (put config :arch-dir arch-dir)))
+  (let [wiki_dir_stat (os/stat (config :wiki-dir))]
     (if (or (nil? wiki_dir_stat) (not= (wiki_dir_stat :mode) :directory))
         (do (eprint "Wiki dir does not exist or is not a directory!")
             (os/exit 1))))
@@ -471,21 +483,37 @@
     nil (edit/interactive config)
     _ (print "Invalid syntax!")))
 
+(def default-root-conf {:wiki-dir "wiki" :collections []})
+
 (defn main [myself & raw_args]
-  # extract args before subcommand (archive/git/wiki) (deprecated use env variables for that)
-  (def subcommand (if (= (length raw_args) 0) nil (raw_args 0)))
-  (setdyn :args @[myself ;(slice raw_args 1 -1)])
+  (var root-conf @{})
+  (def arch-dir (do (def env_arch_dir (os/getenv "ARCH_DIR"))
+                    (def env_arch_stat (if env_arch_dir (os/stat env_arch_dir) nil))
+                    (if (and env_arch_dir (= (env_arch_stat :mode) :directory))
+                        env_arch_dir
+                        (get-default-arch-dir))))
+  (let [root-conf-path (path/join arch-dir ".wanda" "config.jdn")
+        root-conf-stat (os/stat root-conf-path)]
+        (if (or (not root-conf-stat) (not= (root-conf-stat :mode) :file))
+            (do (set root-conf default-root-conf)
+                (let [wanda-path (path/join arch-dir ".wanda")
+                      wanda-stat (os/stat wanda-path)]
+                     (if (not wanda-stat)
+                         (os/mkdir wanda-path)))
+                (spit root-conf-path root-conf)
+                (def git-conf {:arch-dir arch-dir})
+                (git git-conf "reset")
+                (git git-conf "add" ".wanda/config.jdn")
+                (git git-conf "commit" "-m" "wanda: initialized config"))
+            (try (set root-conf (parse (slurp root-conf-path)))
+                 ([err] (eprint "Could not load wanda config: " err)))))
+  (def subcommand (if (= (length raw_args) 0)
+                    nil
+                    (do (setdyn :args @[myself ;(slice raw_args 1 -1)])
+                        (raw_args 0))))
   (case subcommand
-    "archive" (cli/archive)
-    "git" (os/exit
-            (os/execute ["git"
-                         "-C"
-                         (let [wiki_dir (os/getenv "WIKI_DIR")
-                               stat (os/stat wiki_dir)]
-                           (if (or (not stat) (not= (stat :mode) :directory))
-                               (error "$WIKI_DIR doesn't exist or is not a directory")
-                               wiki_dir))
-                         ;(slice raw_args 1 -1)] :p))
-    "wiki" (cli/wiki)
+    "archive" (cli/archive arch-dir root-conf)
+    "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice raw_args 1 -1)] :p))
+    "wiki" (cli/wiki arch-dir root-conf)
     (do (eprint "Unknown subsystem")
         (os/exit 1))))
