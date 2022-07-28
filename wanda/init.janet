@@ -439,6 +439,27 @@
 
 (defn cli/archive [arch-dir root-conf]
   (error "To be implemented"))
+# CLI Design brainstorming:
+# wanda archive ...
+# - $collection $action
+# so to add new collection:
+# - $collection init --type=$type
+# or to remove collection:
+# - $collection rm $element
+# or to pull collection
+# - $collection pull
+# full list of $actions for collections:
+# - add $element $some_options_specifying_from_where_to_read_element - add element to $collection
+# - rm $element - remove element from $collection
+# - ls $optional_query_or_glob_pattern - list elements
+# - select - select element of collection using jff (include preview if possible (specified by collection or $type))
+# - $some_other_action - other action may be specified by the type of $collection or the content of the .script directory of collection
+#    - for example for games:
+#    - info - show info about game
+#    - start - start the game
+#    - pull - pull new image of game
+#    - push - push new image of game
+#    - saves - saves management subsystem (more or less direct git access)
 
 (defn cli/wiki [arch-dir root-conf]
   (def res (argparse/argparse ;argparse-params))
@@ -513,8 +534,13 @@
                     (do (setdyn :args @[myself ;(slice raw_args 1 -1)])
                         (raw_args 0))))
   (case subcommand
-    "archive" (cli/archive arch-dir root-conf)
-    "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice raw_args 1 -1)] :p))
     "wiki" (cli/wiki arch-dir root-conf)
+    "w" (cli/wiki arch-dir root-conf)
+    "archive" (cli/archive arch-dir root-conf)
+    "a" (cli/archive arch-dir root-conf)
+    "collection" (cli/archive arch-dir root-conf)
+    "c" (cli/archive arch-dir root-conf)
+    "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice raw_args 1 -1)] :p))
+    "g" (os/exit (os/execute ["git" "-C" arch-dir ;(slice raw_args 1 -1)] :p))
     (do (eprint "Unknown subsystem")
         (os/exit 1))))
