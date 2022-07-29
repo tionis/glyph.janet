@@ -33,7 +33,7 @@
     (peg/match ~(* "yesterday" -1) date_str) (:date-format (date/days-ago-local 1 today))
     (peg/match ~(* (repeat 4 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) date_str
     (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) (string "20" date_str)
-    (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) (string ((today) :year) "-" date_str)
+    (peg/match ~(* (repeat 2 :d) "-" (repeat 2 :d) -1) date_str) (string (today :year) "-" date_str)
     (peg/match ~(* (between 1 2 :d) -1) date_str) (string (today :year) "-" (to_two_digit_string (+ (today :month) 1)) "-" date_str)
     (peg/match ~(* (some :d) " day" (opt "s") " ago") date_str)
       (let [days_ago (scan-number ((peg/match ~(* (capture (some :d)) " day" (opt "s") " ago") date_str) 0))]
