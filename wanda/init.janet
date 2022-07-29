@@ -506,6 +506,13 @@
 
 (def default-root-conf {:wiki-dir "wiki" :collections []})
 
+(defn print-root-help []
+  (print `Available Subcommands:
+          - wiki - wiki subsystem, use 'wanda wiki --help' for more information
+          - archive - archive/collections subsystem, use 'wanda archive --help' for more information
+          - git - execute git command on the arch repo
+          - help - print this help`))
+
 (defn main [myself & raw_args]
   (var root-conf @{})
   (def arch-dir (do (def env_arch_dir (os/getenv "ARCH_DIR"))
@@ -542,5 +549,11 @@
     "c" (cli/archive arch-dir root-conf)
     "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice raw_args 1 -1)] :p))
     "g" (os/exit (os/execute ["git" "-C" arch-dir ;(slice raw_args 1 -1)] :p))
+    "help" (print-root-help)
+    "--help" (print-root-help)
+    "-h" (print-root-help)
+    "" (print-root-help)
+    nil (print-root-help)
     (do (eprint "Unknown subsystem")
+        (eprint "For help use 'help' subcommand")
         (os/exit 1))))
