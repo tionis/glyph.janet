@@ -50,7 +50,6 @@
           "\n"
           "## Notes\n"))
 
-
 (defn home []
   (def p (os/getenv "HOME"))
   (if (or (not p) (= p ""))
@@ -81,21 +80,27 @@
                                     (if (= ((os/stat x) :mode) :directory)
                                         (indexify_dir x)))))
 
-(defn shell-out
-  "Shell out command and return output"
-  [cmd]
-  (let [x (os/spawn cmd :p {:out :pipe})
-        s (:read (x :out) :all)]
-    (:wait x)
-    (if s s "")))
+(defn exec-slurp
+   "Read stdout of subprocess and return it trimmed in a string." 
+   [& args]
+   (when (dyn :verbose)
+     (flush)
+     (print "(exec-slurp " ;(interpose " " args) ")"))
+   (def proc (os/spawn args :px {:out :pipe}))
+   (def out (get proc :out))
+   (def buf @"")
+   (ev/gather
+     (:read out :all buf)
+     (:wait proc))
+   (string/trimr buf))
 
 (defn git
   "given a config and some arguments execute the git subcommand on wiki"
   [config & args]
-  (shell-out ["git" "-C" (config :arch-dir) ;args]))
+  (exec-slurp "git" "-C" (config :arch-dir) ;args))
 
 (def git_status_codes
-  "a map describing the meaning of the git status --porcellain=v1 short codes"
+  "a map describing the meaning of the git status --porcelain=v1 short codes"
   {"A" :added
    "D" :deleted
    "M" :modified
@@ -111,9 +116,10 @@
   "give a config get the changes in the working tree of the git repo"
   [config]
   (def ret @[])
-  (each line (slice (string/split "\n" (git config "status" "--porcelain=v1")) 0 -2)
-    (let [result (peg/match patt_git_status_line line)]
-      (array/push ret [(git_status_codes (result 0)) (result 1)])))
+  (each line (string/split "\n" (git config "status" "--porcelain=v1"))
+    (if (and line (not= line ""))
+      (let [result (peg/match patt_git_status_line line)]
+        (array/push ret [(git_status_codes (result 0)) (result 1)]))))
   ret)
 
 # TODO remove dependency to setsid
@@ -184,6 +190,7 @@
           :help "do not edit selected file, just print it to stdout"}
    "verbose" {:kind :flag
               :short "v"
+              :action (fn [] (setdyn :verbose true) (print "Verbose Mode enabled!")) # TODO use verbose flag in other funcs
               :help "more verbose logging"}
    :default {:kind :accumulate
              :help positional_args_help_string}])
@@ -260,11 +267,17 @@
           (> change_count 1) (do (git config "add" "-A") (commit config (string "wiki: session from " file))))
         (if (> change_count 0) (if (config :sync)(git/async config "push"))))))
 
+(defn trim-prefix [prefix str]
+  (if (string/has-prefix? prefix str)
+      (slice str (length prefix) -1)
+      str))
+
 (defn search
   "search document based on a regex query and select it interactivly using config"
   [config query]
-  (def found_files (filter |(peg/match patt_without_md $0)
-                           (string/split "\n" (string/trim (git config "grep" "-i" "-l" query ":(exclude).obsidian/*" "./*")))))
+  (def found_files (map |(trim-prefix (string (path/basename (config :wiki-dir)) "/") $0)
+                     (filter |(peg/match patt_without_md $0)
+                           (string/split "\n" (git config "grep" "-i" "-l" query ":(exclude).obsidian/*" "./*")))))
   (def selected_file (file/select config :files-override found_files))
   (if selected_file
       (edit config selected_file)
@@ -473,7 +486,7 @@
     (put config :sync true))
   (if (res "wiki_dir")
       (do (put config :wiki-dir (res "wiki_dir"))
-          (put config :arch-dir (string/trim (shell-out ["git" "-C" (config :wiki-dir) "rev-parse" "--show-toplevel"]))))
+          (put config :arch-dir (exec-slurp "git" "-C" (config :wiki-dir) "rev-parse" "--show-toplevel")))
       (do (put config :wiki-dir (path/join arch-dir (root-conf :wiki-dir)))
           (put config :arch-dir arch-dir)))
   (let [wiki_dir_stat (os/stat (config :wiki-dir))]
