@@ -8,7 +8,7 @@
                   "https://github.com/tionis/remarkable"
                   "https://github.com/janet-lang/jhydro"
                   "https://github.com/janet-lang/sqlite3"
-                  "https://tasadar.net/tionis/yaml.janet"
+                  #"https://tasadar.net/tionis/yaml.janet"
                   "https://github.com/andrewchambers/janet-uri"])
 
 (declare-source :source ["wanda"])
