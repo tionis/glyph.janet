@@ -1,13 +1,14 @@
 #!/bin/env janet
-(use spork)
-(import uri)
-(import ./date)
+(import spork :prefix "" :export true)
+(import uri :export true)
+(import ./date :export true)
 #(use ./log-item) # disabled due to being unfinished
-(import ./dateparser)
-(import fzy :as "fzy")
-(import jff/ui :as "jff")
-(import ./markdown :as "md")
-(import ./filesystem :as "fs")
+(import ./graph :export true)
+(import ./dateparser :export true)
+(import fzy :as "fzy" :export true)
+(import jff/ui :as "jff" :export true)
+(import ./markdown :as "md" :export true)
+(import ./filesystem :as "fs" :export true)
 
 # old hack as workaround https://github.com/janet-lang/janet/issues/995 is solved
 # will keep this here for future reference
@@ -18,14 +19,8 @@
 (def patt_without_md "PEG-Pattern that strips the .md ending of filenames"
   (peg/compile ~(* (capture (any (* (not ".md") 1))) ".md" -1)))
 
-(def patt_git_status_line "PEG-Pattern that parsed one line of git status --porcellain=v1 into a tuple of changetype and filename"
-  (peg/compile ~(* (opt " ") (capture (between 1 2 (* (not " ") 1))) " " (capture (some 1)))))
-
 (def patt_yaml_header "PEG-Pattern that captures the content of a yaml header in a markdown file"
   (peg/compile ~(* "---\n" (capture (any (* (not "\n---\n") 1))) "\n---\n")))
-
-(def patt_md_without_yaml "PEG-Pattern that captures the content of a markdown file without the yaml header"
-  (peg/compile ~(* (opt (* "---\n" (any (* (not "\n---\n") 1)) "\n---\n" (opt "\n"))) (capture (* (any 1))))))
 
 (defn dprint "print x formatted like in the repl" [x]
   (printf "%M" x))
@@ -111,6 +106,9 @@
    "T" :typechange
    "X" :unreadable
    "??" :unknown})
+
+(def patt_git_status_line "PEG-Pattern that parsed one line of git status --porcellain=v1 into a tuple of changetype and filename"
+  (peg/compile ~(* (opt " ") (capture (between 1 2 (* (not " ") 1))) " " (capture (some 1)))))
 
 (defn get_changes
   "give a config get the changes in the working tree of the git repo"
@@ -325,6 +323,9 @@
   (commit config (string "wiki: moved " source " to " target))
   (if (config :sync) (git/async config "push")))
 
+(def patt_md_without_yaml "PEG-Pattern that captures the content of a markdown file without the yaml header"
+  (peg/compile ~(* (opt (* "---\n" (any (* (not "\n---\n") 1)) "\n---\n" (opt "\n"))) (capture (* (any 1))))))
+
 (defn get-content-without-header
   "get content of document without yaml header"
   [path] ((peg/match patt_md_without_yaml (slurp path)) 0))
@@ -333,47 +334,6 @@
   "get all links from document specified by path"
   [config path]
   (md/get-links (get-content-without-header (path/join (config :wiki-dir) path))))
-
-(defn graph/json
-  "get json encoding of graph"
-  [adj]
-  (json/encode adj))
-
-(defn graph/dot 
-  "get dot encoding of graph"
-  [adj]
-  (var ret @"digraph wiki {\n")
-  (eachk k adj
-    (if (= (length (adj k)) 0)
-      (buffer/push ret "  \"" k "\"\n")
-      (buffer/push ret "  \"" k "\" -> \"" (string/join (adj k) "\", \"") "\"\n")))
-  (buffer/push ret "}"))
-
-(defn graph/blockdiag
-  "get blockdiag encoding of graph"
-  [adj]
-  (var ret @"")
-  (eachk k adj
-    (if (= (length (adj k)) 0)
-      (buffer/push ret "\"" k "\"\n")
-      (buffer/push ret "\"" k "\" -> \"" (string/join (adj k) "\", \"") "\"\n")))
-  ret)
-
-(defn graph/mermaid
-  "get mermaid encoding of graph"
-  [adj]
-  (var ret @"graph TD\n")
-  (def id @{})
-  (var num 0)
-  (eachk k adj
-    (put id k num)
-    (+= num 1))
-  (eachk k adj
-    (if (= (length (adj k)) 0)
-        (buffer/push ret "  " (id k) "[" k "]\n"))
-    (each l (adj k)
-      (buffer/push ret "  " (id k) "[" k "] --> " (id l) "\n")))
-  ret)
 
 (defn is-local-link?
   "check wether a given link it a local link or an external one"
