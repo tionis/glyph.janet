@@ -477,6 +477,16 @@
     nil (edit/interactive config)
     _ (print "Invalid syntax!")))
 
+(defn cli/log [arch-dir root-conf]
+  (def count (if (> (length (dyn :args)) 1) ((dyn :args) 1) "10"))
+  (os/execute ["git"
+               "-C"
+               arch-dir
+               "log"
+               "--pretty=format:\"%C(magenta)%h%Creset -%C(red)%d%Creset %s %C(dim green)(%cr) [%an]\""
+               "--abbrev-commit"
+               (string "-" count)] :p))
+
 (def default-root-conf {:wiki-dir "wiki" :collections []})
 
 (defn print-root-help []
@@ -526,6 +536,7 @@
     "--help" (print-root-help)
     "-h" (print-root-help)
     "" (print-root-help)
+    "log" (cli/log arch-dir root-conf)
     nil (print-root-help)
     (do (eprint "Unknown subsystem")
         (eprint "For help use 'help' subcommand")
