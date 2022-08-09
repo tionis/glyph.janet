@@ -141,7 +141,7 @@
             (def message (string/trim (file/read stdin :line)))
             (if (= message "")
                 (git config "commit" "-m" default_message)
-                (git config "commit" "-m" )))
+                (git config "commit" "-m" message)))
         (git config "commit" "-m" default_message))))
 
 (def positional_args_help_string
