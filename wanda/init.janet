@@ -483,7 +483,7 @@
                "-C"
                arch-dir
                "log"
-               "--pretty=format:\"%C(magenta)%h%Creset -%C(red)%d%Creset %s %C(dim green)(%cr) [%an]\""
+               "--pretty=format:%C(magenta)%h%Creset -%C(red)%d%Creset %s %C(dim green)(%cr) [%an]"
                "--abbrev-commit"
                (string "-" count)] :p))
 
