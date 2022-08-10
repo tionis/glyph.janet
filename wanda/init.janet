@@ -540,7 +540,9 @@
     "help" (print-root-help)
     "--help" (print-root-help)
     "-h" (print-root-help)
-    "" (print-root-help) # TODO add sync command that syncs wiki and archives implicitly
+    "" (print-root-help)
+    "sync" (sync/sync)
+    "s" (sync/sync)
     "log" (cli/log arch-dir root-conf)
     "fsck" (cli/fsck arch-dir root-conf)
     nil (print-root-help)
