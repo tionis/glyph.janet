@@ -19,7 +19,7 @@
 (def patt_without_md "PEG-Pattern that strips the .md ending of filenames"
   (peg/compile ~(* (capture (any (* (not ".md") 1))) ".md" -1)))
 
-(def patt_yaml_header "PEG-Pattern that captures the content of a yaml header in a markdown file"
+(def patt_metadata_header "PEG-Pattern that captures the content of a metadata header in a markdown file" # TODO improve this pattern, this may have false positives if a string in the header contain \n---\n
   (peg/compile ~(* "---\n" (capture (any (* (not "\n---\n") 1))) "\n---\n")))
 
 (defn dprint "print x formatted like in the repl" [x]
@@ -323,12 +323,12 @@
   (commit config (string "wiki: moved " source " to " target))
   (if (config :sync) (git/async config "push")))
 
-(def patt_md_without_yaml "PEG-Pattern that captures the content of a markdown file without the yaml header"
+(def patt_md_without_header "PEG-Pattern that captures the content of a markdown file without the metadata header"
   (peg/compile ~(* (opt (* "---\n" (any (* (not "\n---\n") 1)) "\n---\n" (opt "\n"))) (capture (* (any 1))))))
 
 (defn get-content-without-header
-  "get content of document without yaml header"
-  [path] ((peg/match patt_md_without_yaml (slurp path)) 0))
+  "get content of document without metadata header"
+  [path] ((peg/match patt_md_without_header (slurp path)) 0))
 
 (defn get-links
   "get all links from document specified by path"

@@ -1,5 +1,4 @@
 (import remarkable)
-#(import yaml) # TODO write yaml library
 
 (defn extract-all-of-entity-x [str x]
   (def parsed (remarkable/parse-md str))
