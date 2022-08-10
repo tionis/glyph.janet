@@ -487,6 +487,9 @@
                "--abbrev-commit"
                (string "-" count)] :p))
 
+(defn cli/fsck [arch-dir root-conf]
+  (os/execute ["git" "-C" arch-dir "fsck"] :p))
+
 (def default-root-conf {:wiki-dir "wiki" :collections []})
 
 (defn print-root-help []
@@ -494,6 +497,8 @@
           - wiki - wiki subsystem, use 'wanda wiki --help' for more information
           - archive - archive/collections subsystem, use 'wanda archive --help' for more information
           - git - execute git command on the arch repo
+          - log $optional_integer - show a pretty printed log of the last $integer (default 10) operations
+          - fsck - perform a check of all ressources managed by wanda
           - help - print this help`))
 
 (defn main [myself & raw_args]
@@ -535,8 +540,9 @@
     "help" (print-root-help)
     "--help" (print-root-help)
     "-h" (print-root-help)
-    "" (print-root-help)
+    "" (print-root-help) # TODO add sync command that syncs wiki and archives implicitly
     "log" (cli/log arch-dir root-conf)
+    "fsck" (cli/fsck arch-dir root-conf)
     nil (print-root-help)
     (do (eprint "Unknown subsystem")
         (eprint "For help use 'help' subcommand")
