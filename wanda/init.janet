@@ -346,7 +346,7 @@
   (def adj @{})
   (each file (get-files config)
     (put adj file @[])
-    (let [links (filter is-local-link? (get-links config file))]
+    (let [links (filter (fn [x] (is-local-link? (x :target))) (get-links config file))]
       (each link links
         (array/push (adj file) (link :target)))))
   adj)

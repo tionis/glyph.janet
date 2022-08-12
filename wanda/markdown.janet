@@ -8,18 +8,21 @@
 
 (defn walk-and-return-entity-x [dsl x]
   (if (= (type dsl) :tuple)
-      (if (= (dsl 0) x)
-          @[dsl]
-          (if (or ((dsl 1) :container?) ((dsl 1) :inlines?))
-              (do (def ret @[])
-                  (each item (dsl 2)
-                    (each found-item (walk-and-return-entity-x item x)
-                      (array/push ret found-item)))
-                  ret)
-              @[]))
+      (if (> (length dsl) 1)
+          (if (= (dsl 0) x)
+              @[dsl]
+              (if (or ((dsl 1) :container?) ((dsl 1) :inlines?))
+                  (do (def ret @[])
+                      (each item (dsl 2)
+                        (each found-item (walk-and-return-entity-x item x)
+                          (array/push ret found-item)))
+                      ret)
+                  @[]))
+          @[])
       @[]))
 
-(defn extract-all-of-entity-x [str x] (walk-and-return-entity-x (parse-md str) x))
+(defn extract-all-of-entity-x [str x]
+  (walk-and-return-entity-x (parse-md (string/trim str)) x))
 
 (defn get-links [str]
   (def ret @[])
