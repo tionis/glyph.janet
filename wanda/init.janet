@@ -514,7 +514,7 @@
 
 (defn main [myself & raw_args]
   (var root-conf @{})
-  (def arch-dir (do (def env_arch_dir (os/getenv "ARCH_DIR"))
+  (def arch-dir (do (def env_arch_dir (os/getenv "WANDA_ARCH_DIR"))
                     (def env_arch_stat (if env_arch_dir (os/stat env_arch_dir) nil))
                     (if (and env_arch_dir (= (env_arch_stat :mode) :directory))
                         env_arch_dir
