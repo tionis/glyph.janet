@@ -270,6 +270,11 @@
       (slice str (length prefix) -1)
       str))
 
+(defn trim-suffix [suffix str]
+  (if (string/has-suffix? suffix str)
+      (slice str 0 (* -1 (+ 1 (length suffix))))
+      str))
+
 (defn search
   "search document based on a regex query and select it interactivly using config"
   [config query]
@@ -340,15 +345,21 @@
   [link] # NOTE very primitive check may need to be improved later
   (if ((uri/parse link) :scheme) false true))
 
+(defn relative-link-to-id [wiki-dir file-path relative-link-path]
+  (setdyn :path-cwd (path/dirname file-path)) # TODO remove this hack that is needed for spork/path/abspath to work correctly
+  (trim-prefix wiki-dir (trim-suffix ".md" ((uri/parse (path/abspath relative-link-path)) :path))))
+
 (defn get-graph
   "returns a graph describing the wiki using a adjacency list implemented with a map"
   [config]
   (def adj @{})
   (each file (get-files config)
-    (put adj file @[])
+    (def file-id (trim-suffix ".md" file))
+    (put adj file-id @[])
     (let [links (filter (fn [x] (is-local-link? (x :target))) (get-links config file))]
-      (each link links
-        (array/push (adj file) (link :target)))))
+      (each link (map (fn [x] (relative-link-to-id (config :wiki-dir) file (x :target))) links)
+        (array/push (adj file-id) link))))
+    #(if (= (length (adj file-id)) 0) (put adj file-id nil))) # Hide files that don't link to anything from graph
   adj)
 
 (defn graph/gtk
@@ -372,7 +383,7 @@
     ["json"] (print (graph/json (get-graph config)))
     ["blockdiag"] (print (graph/blockdiag (get-graph config)))
     ["mermaid"] (print (graph/mermaid (get-graph config)))
-    [] (graph/gtk config)
+    [] (graph/gtk (get-graph config))
     _ (do (eprint "Unknown command")
           (os/exit 1))))
 
