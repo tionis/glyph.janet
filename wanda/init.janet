@@ -1,10 +1,9 @@
 #!/bin/env janet
-(import spork :prefix "" :export true)
-(import uri :export true)
-(import ./date :export true)
+(import chronos :as "date" true)
+(import spork :prefix "" true)
+(import uri true)
 #(use ./log-item) # disabled due to being unfinished
 (import ./graph :export true)
-(import ./dateparser :export true)
 (import fzy :as "fzy" :export true)
 (import jff/ui :as "jff" :export true)
 (import ./markdown :as "md" :export true)
@@ -298,7 +297,7 @@
   "edit log file for date specified by an array of natural date input that can be empty to default to today"
   [config date_arr]
   (def date_str (if (= (length date_arr) 0) "today" (string/join date_arr " ")))
-  (def parsed_date (dateparser/parse-date date_str))
+  (def parsed_date (:date-format (date/parse-date date_str)))
   (def doc_path (string "log/" parsed_date ".md"))
   (def doc_abs_path (path/join (config :wiki-dir) doc_path))
   (if (not (os/stat doc_abs_path)) (spit doc_abs_path (get-default-log-doc parsed_date)))

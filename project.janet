@@ -6,6 +6,7 @@
                   "https://git.sr.ht/~pepe/jff.git"
                   "https://github.com/janet-lang/spork"
                   "https://github.com/tionis/remarkable"
+                  "https://tasadar.net/tionis/chronos"
                   "https://github.com/janet-lang/jhydro"
                   #"https://github.com/janet-lang/sqlite3"
                   "https://github.com/andrewchambers/janet-uri"])
