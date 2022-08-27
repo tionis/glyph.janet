@@ -419,23 +419,23 @@
     (and (= 0 (% year 4))
          (not= (% year 100)))))
 
-(defn get-week-number []
+(defn get-week-number [&opt date]
   (label weekNo
-    (def today (today))
-    (def daysInFirstWeek (- 7 ((start-of-year 0 today) :week-day)))
-    (def dayOfYear (+ (today :year-day) 1))
+    (default date (today))
+    (def daysInFirstWeek (- 7 ((start-of-year 0 date) :week-day)))
+    (def dayOfYear (+ (date :year-day) 1))
     (if (<= dayOfYear daysInFirstWeek)
         (do
           (if (>= daysInFirstWeek 4) (return weekNo 4))
-          (def daysInFirstWeekOfLastYear (- 7 ((start-of-year -1 today) :week-day)))
+          (def daysInFirstWeekOfLastYear (- 7 ((start-of-year -1 date) :week-day)))
           (if (or (= daysInFirstWeekOfLastYear 4)
-                  (and (is-leap-year (- (today :year) 1))
+                  (and (is-leap-year (- (date :year) 1))
                        (= daysInFirstWeekOfLastYear 5)))
               (return weekNo 53)
               (return weekNo 52))))
     (var weekNum (math/ceil (/ (- dayOfYear daysInFirstWeek) 7)))
     (if (>= daysInFirstWeek 4) (++ weekNum))
     (if (and (= weekNo 53)
-             (>= (- 7 ((start-of-year 1 today) :week-day)) 4))
+             (>= (- 7 ((start-of-year 1 date) :week-day)) 4))
         (set weekNum 1))
     (return weekNo weekNum)))
