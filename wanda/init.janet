@@ -342,7 +342,7 @@
 (defn is-local-link?
   "check wether a given link it a local link or an external one"
   [link] # NOTE very primitive check may need to be improved later
-  (if ((uri/parse link) :scheme) false true))
+  (if ((uri/parse (link :target)) :scheme) false true))
 
 (defn relative-link-to-id [wiki-dir file-path relative-link-path]
   (setdyn :path-cwd (path/dirname file-path)) # TODO remove this hack that is needed for spork/path/abspath to work correctly
@@ -387,24 +387,29 @@
           (os/exit 1))))
 
 (defn check_links
-  "check for broken links in docuement specified by path and config"
-  [config path]
-  # TODO implement this
+  "check for broken links in document specified by path and config"
+  [config file-id]
   (def broken_links @[])
-  (def links (filter is-local-link? (get-links config path))) # TODO ensure that image links are also checked in some way
+  (def file-path (string file-id ".md"))
+  (def links (filter is-local-link? (get-links config file-path))) # TODO ensure that image links are also checked in some way
   (each link links
-    (if (not= ((os/stat (string (path/join path (link :target))))) :mode) :file)
-        (array/push broken_links link))
+    (def target (string (path/join (path/dirname file-id) (link :target)) ".md"))
+    (if (not= (os/stat target :mode) :file)
+        (array/push broken_links {:target target
+                                  :raw_target (link :target)
+                                  :name (link :name)})))
   broken_links)
 
 (defn check_all_links
   "check for broken links in whole wiki specified by config"
   [config]
   (each file (get-files config)
-    (let [result (check_links config file)]
+    (def file-id (trim-suffix ".md" file))
+    (let [result (check_links config file-id)]
          (if (> (length result) 0)
-             (do (eprint "Error in " file "")
-                 (prin) (pp result))))))
+             (do (eprint "Errors in " file ":")
+                 (each err result (print (string/format "%P" err)))
+                 (print))))))
 
 (defn lint
   "lint whole wiki specified by config"
