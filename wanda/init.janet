@@ -1,7 +1,8 @@
 #!/bin/env janet
-(import chronos :as "date" true)
-(import spork :prefix "" true)
-(import uri true)
+(import chronos :as "date" :export true)
+(import spork :prefix "" :export true)
+(import uri :export true)
+(import ./glob :export true)
 #(use ./log-item) # disabled due to being unfinished
 (import ./graph :export true)
 (import fzy :as "fzy" :export true)
@@ -393,31 +394,32 @@
   (def file-path (string file-id ".md"))
   (def links (filter is-local-link? (get-links config file-path))) # TODO ensure that image links are also checked in some way
   (each link links
-    (def target (string (path/join (path/dirname file-id) (link :target)) ".md"))
+    (def target (string (path/join (config :wiki-dir) (path/dirname file-id) (link :target)) ".md"))
     (if (not= (os/stat target :mode) :file)
         (array/push broken_links {:target target
-                                  :raw_target (link :target)
+                                  :raw-target (link :target)
                                   :name (link :name)})))
   broken_links)
 
-(defn check_all_links
-  "check for broken links in whole wiki specified by config"
-  [config]
+(defn lint
+  "lint all files matching optional pattern array in wiki specified by config"
+  [config &opt patterns]
+  (def pegs
+    (map (fn [x] (peg/compile (glob/glob-to-peg x)))
+         (if (or (not patterns) (= (length patterns) 0))
+             ["*"]
+             patterns)))
   (each file (get-files config)
     (def file-id (trim-suffix ".md" file))
-    (let [result (check_links config file-id)]
-         (if (> (length result) 0)
-             (do (eprint "Errors in " file ":")
-                 (each err result (print (string/format "%P" err)))
-                 (print))))))
-
-(defn lint
-  "lint whole wiki specified by config"
-  [config paths]
-  (if (> (length paths) 0)
-      (each path paths
-         (check_links config path))
-      (check_all_links config)))
+    (if (label matches
+          (each peg pegs
+            (if (peg/match peg file-id) (return matches true)))
+          (return matches false))
+        (let [result (check_links config file-id)]
+             (if (> (length result) 0)
+                 (do (eprint "Errors in " file ":")
+                     (each err result (print (string/format "%P" err)))
+                     (print)))))))
 
 (defn ls_command
   "list all files to stdout starting from path in wiki specified by config"
@@ -486,7 +488,7 @@
     ["mv" source target] (mv config source target)
     ["log" & date_arr] (log config date_arr)
     ["sync"] (sync config)
-    ["lint" & paths] (lint config paths)
+    ["lint" & patterns] (lint config patterns)
     ["graph" & args] (graph config args)
     [file] (edit config (string file ".md"))
     nil (edit/interactive config)
