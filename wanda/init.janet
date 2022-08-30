@@ -423,9 +423,19 @@
 
 (defn ls_command
   "list all files to stdout starting from path in wiki specified by config"
-  [config path]
-  (each file (get-files config (if (> (length path) 0) (string/join path " ") nil))
-    (print ((peg/match patt_without_md file) 0))))
+  [config patterns]
+  (def pegs
+    (map (fn [x] (peg/compile (glob/glob-to-peg x)))
+         (if (or (not patterns) (= (length patterns) 0))
+             ["*"]
+             patterns)))
+  (each file (get-files config)
+    (def file-id (trim-suffix ".md" file))
+    (if (label matches
+          (each peg pegs
+            (if (peg/match peg file-id) (return matches true)))
+          (return matches false))
+        (print file-id))))
 
 (defn cli/archive [arch-dir root-conf]
   (error "To be implemented"))
@@ -482,7 +492,7 @@
   (match args
     ["help"] (print_command_help)
     ["search" & search_terms] (search config (string/join search_terms " "))
-    ["ls" & path] (ls_command config path)
+    ["ls" & patterns] (ls_command config patterns)
     ["rm" file] (rm config file)
     ["rm"] (rm/interactive config)
     ["mv" source target] (mv config source target)
