@@ -57,8 +57,9 @@
 
 (defn get-default-arch-dir [] (path/join (home) "arch"))
 
-(defn indexify_dir
-  "transform given dir to index.md based md structure"
+(defn indexify_dir # TODO check if this still works after the file-id migration
+  "transform given dir to index.md based md structure" # TODO also transform non markdown files into their markdown equivalent (probably using the html render function)
+  # TODO maybe instead of editing in-place an output tar file could be used?
   [path]
   (let [items (os/dir path)]
     (each item items
@@ -90,7 +91,7 @@
      (:wait proc))
    (string/trimr buf))
 
-(defn git
+(defn git # TODO put the git handling stuff into its own module
   "given a config and some arguments execute the git subcommand on wiki"
   [config & args]
   (exec-slurp "git" "-C" (config :arch-dir) ;args))
@@ -161,11 +162,15 @@
 
 (def ls-files-peg
   "Peg to handle files from git ls-files"
-  (peg/compile
+  (peg/compile # TODO finish this
     ~{:param (+ (* `"` '(any (if-not `"` (* (? "\\") 1))) `"`)
                 (* `'` '(any (if-not `'` (* (? "\\") 1))) `'`)
-                '(some (if-not "" 1)))
+                (some (if-not "" 1)))
       :main (any (* (capture (any (* (not "\n") 1))) "\n"))}))
+
+(defn is-doc [path]
+  (index-of (util/only-ext path)
+            [".md"]))
 
 (defn get-files
   "given a config and optional path to begin list all documents in wiki (not assets, only documents)"
@@ -175,11 +180,11 @@
   (if (= ((os/stat p) :mode) :file)
       p
       (map |((peg/match ~(* ,p (? (+ "/" "\\")) (capture (any 1))) $0) 0)
-            (filter |(util/no-ext $0)
-                    (fs/list-all-files p)))))
-  #(peg/match ls-files-peg (string (git config "ls-files")) "\n"))
+            (filter |(is-doc $0) # TODO migrate away from filesystem.janet
+                    (fs/list-all-files p))))) # TODO migration to the inclusion of file endings and using the get-doc-path function to get a full valid wiki path from an ambigous pathless link
+  #(peg/match ls-files-peg (string (git config "ls-files")) "\n")) # TODO implement this probably fast ways
   # - maybe use git ls-files as it is faster?
-  # - warning: ls-files does not print special chars but puts the paths between " and escapes the special chars
+  # - warning: ls-files does not print special chars but puts the paths between " and escapes the special chars -> problem with newlines?
   # - problem: this is a bit more complex and I would have to fix my PEG above to correctly parse the output again
 
 (defn interactive-select
@@ -248,7 +253,7 @@
   "search document based on a regex query and select it interactivly using config"
   [config query]
   (def found_files (map |(trim-prefix (string (path/basename (config :wiki-dir)) "/") $0)
-                     (filter |(util/no-ext $0)
+                     (filter |(is-doc $0)
                            (string/split "\n" (git config "grep" "-i" "-l" query ":(exclude).obsidian/*" "./*")))))
   (def selected_file (file/select config :files-override found_files))
   (if selected_file
