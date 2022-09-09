@@ -190,7 +190,10 @@
 (defn file/select
   "let user interactivly select a file, optionally accepts a files-override for a custom file set and preview-command to show the output of in a side window for the currently selected file"
   [config &named files-override preview-command]
-  (def files (map |($0 0) (map |(util/no-ext $0) (if files-override files-override (get-files config)))))
+  (def files (map (fn [x] (if (not= (string/find "." x) 0)
+                              (util/no-ext x)
+                              x))
+                  (if files-override files-override (get-files config))))
   (def selected (interactive-select files))
   (if selected (string selected ".md") selected))
 
