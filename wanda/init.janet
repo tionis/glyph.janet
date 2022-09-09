@@ -121,7 +121,6 @@
         (array/push ret [(git_status_codes (result 0)) (result 1)]))))
   ret)
 
-# TODO remove dependency to setsid
 # maybe use c wrapper and c code as seen here:
 # https://man7.org/tlpi/code/online/book/daemons/become_daemon.c.html
 # this may be blocked until https://github.com/janet-lang/janet/issues/995 is solved
@@ -131,7 +130,7 @@
   (def null_file (get-null-file))
   (def fout (os/open null_file :w))
   (def ferr (os/open null_file :w))
-  (os/execute ["setsid" "-f" "git" "-C" (config :arch-dir ) ;args] :p {:out fout :err ferr}))
+  (os/spawn ["git" "-C" (config :arch-dir ) ;args] :pd {:out fout :err ferr}))
 
 (defn commit
   "commit staged files, ask user based on config for message, else fallback to default_message"
@@ -338,7 +337,7 @@
   (def fout (os/open null_file :w))
   (def ferr (os/open null_file :w))
   (prin "Starting Interface... ") (flush)
-  (os/execute ["setsid" "-f" "dot" "-Tgtk"] :p {:in (streams 0) :out fout :err ferr})
+  (os/spawn ["dot" "-Tgtk"] :pd {:in (streams 0) :out fout :err ferr})
   (print "Done."))
 
 (defn graph
@@ -486,10 +485,11 @@
   (print "Collection removed from index, if the collection-data still exists please remove it now."))
 
 (defn cli/archive/collection [arch-dir root-conf collection-name]
-  (os/execute [(path/join arch-dir
-                          (get-in root-conf [:collections collection-name :path])
-                          ".main")
-               ;(slice (dyn :args) 1 -1)]))
+  (def collection-path (path/join arch-dir (get-in root-conf [:collections collection-name :path])))
+  (def prev-dir (os/cwd))
+  (defer (os/cd prev-dir)
+    (os/cd collection-path)
+    (os/execute [".main" ;(slice (dyn :args) 1 -1)])))
 
 (defn cli/archive [arch-dir root-conf]
   (if (<= (length (dyn :args)) 1)
