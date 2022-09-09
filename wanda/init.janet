@@ -1,4 +1,5 @@
 #!/bin/env janet
+(import flock)
 (import chronos :as "date" :export true)
 (import spork :prefix "" :export true)
 (import uri :export true)
@@ -9,6 +10,7 @@
 (import jff/ui :as "jff" :export true)
 (import ./markdown :as "md" :export true)
 (import ./filesystem :as "fs" :export true)
+(import ./util :export true)
 
 # old hack as workaround https://github.com/janet-lang/janet/issues/995 is solved
 # will keep this here for future reference
@@ -16,8 +18,7 @@
 #(ffi/defbind setpgid :int [pid :int pgid :int])
 #(ffi/defbind getpgid :int [pid :int])
 
-(def patt_without_md "PEG-Pattern that strips the .md ending of filenames"
-  (peg/compile ~(* (capture (any (* (not ".md") 1))) ".md" -1)))
+(def patt-strip-file-ending (peg/compile ~(* (capture (some (* (not ".") 1))) "." (some 1))))
 
 (def patt_metadata_header "PEG-Pattern that captures the content of a metadata header in a markdown file" # TODO improve this pattern, this may have false positives if a string in the header contain \n---\n
   (peg/compile ~(* "---\n" (capture (any (* (not "\n---\n") 1))) "\n---\n")))
@@ -61,7 +62,7 @@
   [path]
   (let [items (os/dir path)]
     (each item items
-      (let [name (peg/match patt_without_md item)]
+      (let [name (util/no-ext item)]
         (if name
             (each item2 items
               (if (= item2 (name 0))
@@ -159,40 +160,6 @@
           - git $args - pass args thru to git`))
 (defn print_command_help "print help for subcommands" [] (print positional_args_help_string))
 
-(def argparse-params
-  [(string "A simple local cli wiki using git for synchronization\n"
-           "for help with commands use --command_help")
-   "wiki_dir" {:kind :option
-               :short "wd"
-               :help "Manually set wiki_dir"}
-   "command_help" {:kind :flag
-                   :short "ch"
-                   :help "Prints command help"}
-   "no_commit" {:kind :flag
-                :short "nc"
-                :help "Do not commit changes"}
-   "no_sync" {:kind :flag
-              :short "ns"
-              :help "Do not automatically sync repo in background (does not apply to manual sync). This is enabled by default if $WIKI_NO_SYNC is set to \"true\""}
-   "force" {:kind :flag
-            :short "f"
-            :help "foce selected operation, works for rm & mv"}
-   "no_pull" {:kind :flag
-              :short "np"
-              :help "do not pull from repo"}
-   "ask-commit-message" {:kind :flag
-                         :short "ac"
-                         :help "ask for the commit message instead of auto generating one"}
-   "cat" {:kind :flag
-          :short "c"
-          :help "do not edit selected file, just print it to stdout"}
-   "verbose" {:kind :flag
-              :short "v"
-              :action (fn [] (setdyn :verbose true) (print "Verbose Mode enabled!")) # TODO use verbose flag in other funcs
-              :help "more verbose logging"}
-   :default {:kind :accumulate
-             :help positional_args_help_string}])
-
 (def ls-files-peg
   "Peg to handle files from git ls-files"
   (peg/compile
@@ -209,7 +176,7 @@
   (if (= ((os/stat p) :mode) :file)
       p
       (map |((peg/match ~(* ,p (? (+ "/" "\\")) (capture (any 1))) $0) 0)
-            (filter |(peg/match patt_without_md $0)
+            (filter |(util/no-ext $0)
                     (fs/list-all-files p)))))
   #(peg/match ls-files-peg (string (git config "ls-files")) "\n"))
   # - maybe use git ls-files as it is faster?
@@ -224,7 +191,7 @@
 (defn file/select
   "let user interactivly select a file, optionally accepts a files-override for a custom file set and preview-command to show the output of in a side window for the currently selected file"
   [config &named files-override preview-command]
-  (def files (map |($0 0) (map |(peg/match patt_without_md $0) (if files-override files-override (get-files config)))))
+  (def files (map |($0 0) (map |(util/no-ext $0) (if files-override files-override (get-files config)))))
   (def selected (interactive-select files))
   (if selected (string selected ".md") selected))
 
@@ -279,7 +246,7 @@
   "search document based on a regex query and select it interactivly using config"
   [config query]
   (def found_files (map |(trim-prefix (string (path/basename (config :wiki-dir)) "/") $0)
-                     (filter |(peg/match patt_without_md $0)
+                     (filter |(util/no-ext $0)
                            (string/split "\n" (git config "grep" "-i" "-l" query ":(exclude).obsidian/*" "./*")))))
   (def selected_file (file/select config :files-override found_files))
   (if selected_file
@@ -437,32 +404,139 @@
           (return matches false))
         (print file-id))))
 
+(defn- config/load [arch-dir]
+  (def conf-path (path/join arch-dir ".wanda" "config.jdn"))
+  (try (parse (slurp conf-path))
+       ([err] (error "Could not parse wanda config"))))
+
+(defn config/eval [arch-dir eval-func &opt commit-message]
+  (def conf-path (path/join arch-dir ".wanda" "config.jdn"))
+  (with [lock (flock/acquire conf-path :block :exclusive)]
+    (def old-conf (config/load arch-dir))
+    (def new-conf (eval-func old-conf))
+    (spit conf-path (string/format "%j" new-conf))
+    (def git-conf {:arch-dir arch-dir})
+    (git git-conf "reset")
+    (git git-conf "add" ".wanda/config.jdn")
+    (default commit-message "config: updated config")
+    (git git-conf "commit" "-m" commit-message)
+    (flock/release lock)))
+
+(defn archive/add [arch-dir root-conf name path]
+  (def posix-path (path/posix/join ;(path/parts path)))
+  (sh/create-dirs (path/join arch-dir ;(path/posix/parts posix-path)))
+  (config/eval
+    arch-dir
+    (fn [x] (put-in x [:collections name :path] posix-path) x)
+    (string "config: added new collection " name " at " path)))
+
+(defn cli/archive/add [arch-dir root-conf]
+  (def res
+    (argparse/argparse
+      "Add a new collection to the archive"
+      "name" {:kind :option
+              :required true
+              :short "n"
+              :help "the name of the new collection"}
+      "path" {:kind :option
+              :required true
+              :short "p"
+              :help "the path of the new collection, must be a relative path from the arch_dir root"}))
+  (unless res (os/exit 1))
+  (archive/add arch-dir root-conf (res "name") (res "path"))
+  (print `Collection was added to index. You can now add a .main script and manage the collection via git.
+         For examples for .main script check the wanda main repo at https://tasadar.net/tionis/wanda`))
+
+(defn archive/ls [arch-dir root-conf &opt glob-pattern]
+  (default glob-pattern "*")
+  (def pattern (glob/glob-to-peg glob-pattern))
+  (def ret @[])
+  (eachk k (root-conf :collections)
+    (if (peg/match pattern k) (array/push ret k)))
+  ret)
+
+(defn cli/archive/ls [arch-dir root-conf]
+  (def res
+    (argparse/argparse
+      "list collections with an optional pattern"
+      "dir" {:kind :flag
+             :short "d"
+             :help "Output dir instead of name of collections"}
+      :default {:kind :accumulate}))
+  (unless res (os/exit 1))
+  (def pattern (first (res :default)))
+  (if (res "dir")
+      (each k (archive/ls arch-dir root-conf pattern) (print (get-in root-conf [:collections k :path])))
+      (each k (archive/ls arch-dir root-conf pattern) (print k))))
+
+(defn archive/rm [arch-dir root-conf collection-name]
+  (config/eval
+    arch-dir
+    (fn [x] (put-in x [:collections collection-name] nil) x)
+    (string "config: removed collection " collection-name)))
+
+(defn cli/archive/rm [arch-dir root-conf]
+  (def res
+    (argparse/argparse
+      "remove a collection"
+      :default {:kind :accumulate}))
+  (unless res (os/exit 1))
+  (if (= (length (res :default)) 0) (do (print "Specify collection to remove!") (os/exit 1)))
+  (archive/rm arch-dir root-conf (first (res :default)))
+  (print "Collection removed from index, if the collection-data still exists please remove it now."))
+
+(defn cli/archive/collection [arch-dir root-conf collection-name]
+  (os/execute [(path/join arch-dir
+                          (get-in root-conf [:collections collection-name :path])
+                          ".main")
+               ;(slice (dyn :args) 1 -1)]))
+
 (defn cli/archive [arch-dir root-conf]
-  (error "To be implemented"))
-# CLI Design brainstorming:
-# wanda archive ...
-# - $collection $action
-# so to add new collection:
-# - $collection init --type=$type
-# or to remove collection:
-# - $collection rm $element
-# or to pull collection
-# - $collection pull
-# full list of $actions for collections:
-# - add $element $some_options_specifying_from_where_to_read_element - add element to $collection
-# - rm $element - remove element from $collection
-# - ls $optional_query_or_glob_pattern - list elements
-# - select - select element of collection using jff (include preview if possible (specified by collection or $type))
-# - $some_other_action - other action may be specified by the type of $collection or the content of the .script directory of collection
-#    - for example for games:
-#    - info - show info about game
-#    - start - start the game
-#    - pull - pull new image of game
-#    - push - push new image of game
-#    - saves - saves management subsystem (more or less direct git access)
+  (if (<= (length (dyn :args)) 1)
+      (do (cli/archive/ls arch-dir root-conf)
+          (os/exit 0)))
+  (def subcommand ((dyn :args) 1))
+  (setdyn :args [((dyn :args) 0) ;(slice (dyn :args) 2 -1)])
+  (case subcommand
+    "add" (cli/archive/add arch-dir root-conf)
+    "ls" (cli/archive/ls arch-dir root-conf)
+    "rm" (cli/archive/rm arch-dir root-conf)
+    (cli/archive/collection arch-dir root-conf subcommand)))
 
 (defn cli/wiki [arch-dir root-conf]
-  (def res (argparse/argparse ;argparse-params))
+  (def res (argparse/argparse
+    ```A simple local cli wiki using git for synchronization
+       for help with commands use --command_help```
+   "wiki_dir" {:kind :option
+               :short "wd"
+               :help "Manually set wiki_dir"}
+   "command_help" {:kind :flag
+                   :short "ch"
+                   :help "Prints command help"}
+   "no_commit" {:kind :flag
+                :short "nc"
+                :help "Do not commit changes"}
+   "no_sync" {:kind :flag
+              :short "ns"
+              :help "Do not automatically sync repo in background (does not apply to manual sync). This is enabled by default if $WIKI_NO_SYNC is set to \"true\""}
+   "force" {:kind :flag
+            :short "f"
+            :help "foce selected operation, works for rm & mv"}
+   "no_pull" {:kind :flag
+              :short "np"
+              :help "do not pull from repo"}
+   "ask-commit-message" {:kind :flag
+                         :short "ac"
+                         :help "ask for the commit message instead of auto generating one"}
+   "cat" {:kind :flag
+          :short "c"
+          :help "do not edit selected file, just print it to stdout"}
+   "verbose" {:kind :flag
+              :short "v"
+              :action (fn [] (setdyn :verbose true) (print "Verbose Mode enabled!")) # TODO use verbose flag in other funcs
+              :help "more verbose logging"}
+   :default {:kind :accumulate
+             :help positional_args_help_string}))
   (unless res (os/exit 1)) # exit with error if the arguments cannot be parsed
   (if (res "command_help") (do (print_command_help) (os/exit 0)))
   (def args (res :default))
@@ -535,7 +609,8 @@
                     (if (and env_arch_dir (= (env_arch_stat :mode) :directory))
                         env_arch_dir
                         (get-default-arch-dir))))
-  (let [root-conf-path (path/join arch-dir ".wanda" "config.jdn")
+  (os/cd arch-dir)
+  (let [root-conf-path (path/join arch-dir ".wanda" "config.jdn") # TODO don't auto write a wanda config add a command for it
         root-conf-stat (os/stat root-conf-path)]
         (if (or (not root-conf-stat) (not= (root-conf-stat :mode) :file))
             (do (set root-conf default-root-conf)
