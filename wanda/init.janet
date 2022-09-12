@@ -501,11 +501,14 @@
   (print "Subsystem removed from index, if the subsystem-data still exists please remove it now."))
 
 (defn cli/subsystem/execute [arch-dir root-conf subsystem-name]
-  (def subsystem-path (path/join arch-dir (get-in root-conf [:subsystems subsystem-name :path])))
-  (def prev-dir (os/cwd))
-  (defer (os/cd prev-dir)
-    (os/cd subsystem-path)
-    (os/execute [".main" ;(slice (dyn :args) 1 -1)])))
+  (if (get-in root-conf [:subsystems subsystem-name])
+      (do (def subsystem-path (path/join arch-dir (get-in root-conf [:subsystems subsystem-name :path])))
+          (def prev-dir (os/cwd))
+          (defer (os/cd prev-dir)
+            (os/cd subsystem-path)
+            (os/execute [".main" ;(slice (dyn :args) 1 -1)])))
+      (do (eprint "Subsystem does not exist, use help to list existing ones")
+          (os/exit 1))))
 
 (defn cli/subsystem [arch-dir root-conf]
   (if (<= (length (dyn :args)) 1)
