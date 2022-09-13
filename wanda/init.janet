@@ -509,6 +509,13 @@
       (do (eprint "module does not exist, use help to list existing ones")
           (os/exit 1))))
 
+(defn cli/modules/help [arch-dir root-conf]
+  (print `Available Subcommands:
+           add - add a new module
+           ls - list modules
+           rm - remove a module
+           help - show this help`))
+
 (defn cli/modules [arch-dir root-conf]
   (if (<= (length (dyn :args)) 1)
       (do (cli/modules/ls arch-dir root-conf)
@@ -519,6 +526,7 @@
     "add" (cli/modules/add arch-dir root-conf)
     "ls" (cli/modules/ls arch-dir root-conf)
     "rm" (cli/modules/rm arch-dir root-conf)
+    "help" (cli/modules/help arch-dir root-conf)
     (cli/modules/execute arch-dir root-conf subcommand)))
 
 (defn cli/wiki [arch-dir root-conf]
