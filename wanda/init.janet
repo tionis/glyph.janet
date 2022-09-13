@@ -614,7 +614,7 @@
 (defn print-root-help [arch-dir root-conf]
   (def preinstalled `Available Subcommands:
                       wiki - wiki module, use 'wanda wiki --help' for more information
-                      module - manage your custom modules, use 'wanda module --help' for more information
+                      modules - manage your custom modules, use 'wanda module --help' for more information
                       git - execute git command on the arch repo
                       log $optional_integer - show a pretty printed log of the last $integer (default 10) operations
                       fsck - perform a check of all ressources managed by wanda
@@ -658,6 +658,7 @@
   (case subcommand
     "wiki" (cli/wiki arch-dir root-conf)
     "w" (cli/wiki arch-dir root-conf)
+    "modules" (cli/modules arch-dir root-conf)
     "module" (cli/modules arch-dir root-conf)
     "m" (cli/modules arch-dir root-conf)
     "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice raw_args 1 -1)] :p))
