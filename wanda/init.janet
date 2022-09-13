@@ -629,12 +629,12 @@
 
 (defn main [myself & raw_args]
   (var root-conf @{})
-  (def arch-dir (do (def env_arch_dir (os/getenv "WANDA_ARCH_DIR"))
+  (def arch-dir (do (def env_arch_dir (os/getenv "WANDA_ARCH_DIR")) # TODO[branding] change this env var
                     (def env_arch_stat (if env_arch_dir (os/stat env_arch_dir) nil))
                     (if (and env_arch_dir (= (env_arch_stat :mode) :directory))
                         env_arch_dir
                         (get-default-arch-dir))))
-  (os/cd arch-dir)
+  (os/cd arch-dir) # TODO[branding] also change the default config.jdn location to remove wanda branding
   (let [root-conf-path (path/join arch-dir ".wanda" "config.jdn") # TODO don't auto write a wanda config add a command for it
         root-conf-stat (os/stat root-conf-path)]
         (if (or (not root-conf-stat) (not= (root-conf-stat :mode) :file))
