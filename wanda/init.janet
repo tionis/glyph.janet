@@ -96,6 +96,8 @@
   [config & args]
   (exec-slurp "git" "-C" (config :arch-dir) ;args))
 
+(defn git/loud [config & args] (os/execute ["git" "-C" (config :arch-dir) ;args] :p))
+
 (def git_status_codes
   "a map describing the meaning of the git status --porcelain=v1 short codes"
   {"A" :added
@@ -423,18 +425,21 @@
     (def new-conf (eval-func old-conf))
     (spit conf-path (string/format "%j" new-conf))
     (def git-conf {:arch-dir arch-dir})
-    (git git-conf "reset")
-    (git git-conf "add" ".wanda/config.jdn")
+    (git/loud git-conf "reset")
+    (git/loud git-conf "add" ".wanda/config.jdn")
     (default commit-message "config: updated config")
-    (git git-conf "commit" "-m" commit-message)
+    (git/loud git-conf "commit" "-m" commit-message)
     (flock/release lock)))
 
-(defn module/add [arch-dir root-conf name path]
+(defn module/add [arch-dir root-conf name path description]
   (def posix-path (path/posix/join ;(path/parts path)))
   (sh/create-dirs (path/join arch-dir ;(path/posix/parts posix-path)))
   (config/eval
     arch-dir
-    (fn [x] (put-in x [:modules name :path] posix-path) x)
+    (fn [x]
+      (put-in x [:modules name :path] posix-path)
+      (put-in x [:modules name :description] description)
+      x)
     (string "config: added new module " name " at " path)))
 
 (defn cli/modules/add [arch-dir root-conf]
@@ -454,7 +459,7 @@
                      :short "d"
                      :help "the description of the new module"}))
   (unless res (os/exit 1))
-  (module/add arch-dir root-conf (res "name") (res "path"))
+  (module/add arch-dir root-conf (res "name") (res "path") (res "description"))
   (print `module was added to index. You can now add a .main script and manage it via git.
          For examples for .main script check the wanda main repo at https://tasadar.net/tionis/wanda`))
 
@@ -630,6 +635,7 @@
   (def custom @"")
   (if (root-conf :modules)
     (do (eachk k (root-conf :modules)
+                 (pp k)
                  (buffer/push custom "  " k " - " (get-in root-conf [:modules k :description]) "\n"))
         (prin (string preinstalled "\n" custom))
         (flush))

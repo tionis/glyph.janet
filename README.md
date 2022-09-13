@@ -1,10 +1,16 @@
-<style>
-r { color: Red }
-o { color: Orange }
-g { color: Green }
-</style>
 # Wanda
-Wanda (<r>W</r>iki <r>AND</r> <r>A</r>rchive) is a knowledgebase helper that help you to manage a personal wiki and also manage an archive of other data.  
+> NOTICE: This tool is actually in the process to be reworked completly.  
+
+In the future the wiki will be one of multiple (optional) modules including:  
+- config managment
+- device crypto-key managment
+- the wiki itself
+- timers
+- many more
+This will make wanda (may be renamed) just a simple personal archive manager, that is defined by a git repo that defines it's modules
+
+## Old Description (still mostly relevant)
+Wanda (**W**iki **AND** **A**rchive) is a knowledgebase helper that help you to manage a personal wiki and also manage an archive of other data.  
 The Wiki part of this application is kind of a commandline equivalent of Obsidian or can also be seen as a wrapper for other wiki helpers like vimwiki and uses git for syncing of different machines as well as versioning of the documents.  
 For the Archive part of this application it adds a few wrappers for downloading and managing data (extendable by user scripts) as well as a way to synchronize the data alongside the wiki without checking them directly into git. (Not yet implemented).
 Large parts of wanda are self documenting via the cli and --help flags, following things should be noted:  
