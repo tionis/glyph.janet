@@ -3,9 +3,9 @@
   :description "wiki/knowledgebase managment program"
   #:lflags ["-static"]
   :dependencies  ["https://git.sr.ht/~pepe/jfzy" # TODO this can probably be removed, but is still required by jff
-                  "https://tasadar.net/tionis/fuzzy-select.git" # TODO this needs UI improvements (maybe replace it with own)
+                  "https://tasadar.net/tionis/fuzzy-select.git" # TODO this needs UI improvements # TODO switch back to pepes version if changes are merged
                   "https://github.com/janet-lang/spork"
-                  "https://github.com/tionis/remarkable" # TODO this needs tags support
+                  "https://github.com/tionis/remarkable" # TODO this needs tags support (could just use markable and then parse the html back to DSL)
                   "https://tasadar.net/tionis/chronos" # TODO this needs various fixes and API changes
                   "https://github.com/janet-lang/jhydro" # TODO this may be removed
                   "https://github.com/andrewchambers/janet-flock"

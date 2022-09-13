@@ -429,98 +429,97 @@
     (git git-conf "commit" "-m" commit-message)
     (flock/release lock)))
 
-(defn subsystem/add [arch-dir root-conf name path]
+(defn module/add [arch-dir root-conf name path]
   (def posix-path (path/posix/join ;(path/parts path)))
   (sh/create-dirs (path/join arch-dir ;(path/posix/parts posix-path)))
   (config/eval
     arch-dir
-    (fn [x] (put-in x [:subsystems name :path] posix-path) x)
-    (string "config: added new subsystem " name " at " path)))
+    (fn [x] (put-in x [:modules name :path] posix-path) x)
+    (string "config: added new module " name " at " path)))
 
-(defn cli/subsystem/add [arch-dir root-conf]
+(defn cli/modules/add [arch-dir root-conf]
   (def res
     (argparse/argparse
-      "Add a new subsystem to the wanda subsystem"
+      "Add a new module to the wanda archive"
       "name" {:kind :option
               :required true
               :short "n"
-              :help "the name of the new subsystem"}
+              :help "the name of the new module"}
       "path" {:kind :option
               :required true
               :short "p"
-              :help "the path of the new subsystem, must be a relative path from the arch_dir root"}
+              :help "the path of the new module, must be a relative path from the arch_dir root"}
       "description" {:kind :option
                      :required true
                      :short "d"
-                     :help "the description of the new subsystem"}))
+                     :help "the description of the new module"}))
   (unless res (os/exit 1))
-  (subsystem/add arch-dir root-conf (res "name") (res "path"))
-  (print `Subsystem was added to index. You can now add a .main script and manage it via git.
+  (module/add arch-dir root-conf (res "name") (res "path"))
+  (print `module was added to index. You can now add a .main script and manage it via git.
          For examples for .main script check the wanda main repo at https://tasadar.net/tionis/wanda`))
 
-(defn subsystem/ls [arch-dir root-conf &opt glob-pattern]
+(defn module/ls [arch-dir root-conf &opt glob-pattern]
   (default glob-pattern "*")
   (def pattern (glob/glob-to-peg glob-pattern))
   (def ret @[])
-  (eachk k (root-conf :subsystems)
+  (eachk k (root-conf :modules)
     (if (peg/match pattern k) (array/push ret k)))
   ret)
 
-(defn cli/subsystem/ls [arch-dir root-conf]
+(defn cli/modules/ls [arch-dir root-conf]
   (def res
     (argparse/argparse
-      "list subsystems with an optional pattern"
+      "List modules with an optional pattern"
       "output" {:kind :option
                 :short "o"
                :help "Output format, valid options are jdn, jsonl, pretty"}
       :default {:kind :accumulate}))
   (unless res (os/exit 1))
   (def pattern (first (res :default)))
-  (def subsystems (subsystem/ls arch-dir root-conf pattern))
+  (def modules (module/ls arch-dir root-conf pattern))
   (case (res "output")
-    "jdn" (print (string/join (map |(string/format "%j" (get-in root-conf [:subsystems $0])) subsystems) "\n"))
-    "jsonl" (print (string/join (map |(json/encode (get-in root-conf [:subsystems $0])) subsystems) "\n"))
-    "pretty" (print (string/join (map |(string/format "%P" (get-in root-conf [:subsystems $0])) subsystems) "\n"))
-    (print (string/join (map |(string $0 " - " (get-in root-conf [:subsystems $0 :description])) subsystems) "\n"))))
+    "jdn" (print (string/join (map |(string/format "%j" (get-in root-conf [:modules $0])) modules) "\n"))
+    "jsonl" (print (string/join (map |(json/encode (get-in root-conf [:modules $0])) modules) "\n"))
+    "pretty" (print (string/join (map |(string/format "%P" (get-in root-conf [:modules $0])) modules) "\n"))
+    (print (string/join (map |(string $0 " - " (get-in root-conf [:modules $0 :description])) modules) "\n"))))
 
-
-(defn subsystem/rm [arch-dir root-conf subsystem-name]
+(defn module/rm [arch-dir root-conf module-name]
   (config/eval
     arch-dir
-    (fn [x] (put-in x [:subsystems subsystem-name] nil) x)
-    (string "config: removed subsystem " subsystem-name)))
+    (fn [x] (put-in x [:modules module-name] nil) x)
+    (string "config: removed module " module-name)))
 
-(defn cli/subsystem/rm [arch-dir root-conf]
+(defn cli/modules/rm [arch-dir root-conf]
   (def res
     (argparse/argparse
-      "remove a subsystem"
+      "remove a module"
       :default {:kind :accumulate}))
   (unless res (os/exit 1))
-  (if (= (length (res :default)) 0) (do (print "Specify subsystem to remove!") (os/exit 1)))
-  (subsystem/rm arch-dir root-conf (first (res :default)))
-  (print "Subsystem removed from index, if the subsystem-data still exists please remove it now."))
+  (if (= (length (res :default)) 0) (do (print "Specify module to remove!") (os/exit 1)))
+  (module/rm arch-dir root-conf (first (res :default)))
+  (print "module removed from index, if the module-data still exists please remove it now."))
 
-(defn cli/subsystem/execute [arch-dir root-conf subsystem-name]
-  (if (get-in root-conf [:subsystems subsystem-name])
-      (do (def subsystem-path (path/join arch-dir (get-in root-conf [:subsystems subsystem-name :path])))
+(defn cli/modules/execute [arch-dir root-conf module-name]
+  (if (get-in root-conf [:modules module-name])
+      (do (def module-path (path/join arch-dir (get-in root-conf [:modules module-name :path])))
           (def prev-dir (os/cwd))
           (defer (os/cd prev-dir)
-            (os/cd subsystem-path)
+            (os/cd module-path)
             (os/execute [".main" ;(slice (dyn :args) 1 -1)])))
-      (do (eprint "Subsystem does not exist, use help to list existing ones")
+      (do (eprint "module does not exist, use help to list existing ones")
           (os/exit 1))))
 
-(defn cli/subsystem [arch-dir root-conf]
+(defn cli/modules [arch-dir root-conf]
   (if (<= (length (dyn :args)) 1)
-      (do (cli/subsystem/ls arch-dir root-conf)
+      (do (cli/modules/ls arch-dir root-conf)
           (os/exit 0)))
   (def subcommand ((dyn :args) 1))
   (setdyn :args [((dyn :args) 0) ;(slice (dyn :args) 2 -1)])
   (case subcommand
-    "add" (cli/subsystem/add arch-dir root-conf)
-    "ls" (cli/subsystem/ls arch-dir root-conf)
-    "rm" (cli/subsystem/rm arch-dir root-conf)
-    (cli/subsystem/execute arch-dir root-conf subcommand)))
+    "add" (cli/modules/add arch-dir root-conf)
+    "ls" (cli/modules/ls arch-dir root-conf)
+    "rm" (cli/modules/rm arch-dir root-conf)
+    (cli/modules/execute arch-dir root-conf subcommand)))
 
 (defn cli/wiki [arch-dir root-conf]
   (def res (argparse/argparse
@@ -610,21 +609,23 @@
 (defn cli/fsck [arch-dir root-conf]
   (os/execute ["git" "-C" arch-dir "fsck"] :p))
 
-(def default-root-conf {:wiki-dir "wiki" :subsystems []})
+(def default-root-conf {:wiki-dir "wiki" :modules []})
 
 (defn print-root-help [arch-dir root-conf]
   (def preinstalled `Available Subcommands:
-                      wiki - wiki subsystem, use 'wanda wiki --help' for more information
-                      subsystem - manage your custom subsystems, use 'wanda subsystem --help' for more information
+                      wiki - wiki module, use 'wanda wiki --help' for more information
+                      module - manage your custom modules, use 'wanda module --help' for more information
                       git - execute git command on the arch repo
                       log $optional_integer - show a pretty printed log of the last $integer (default 10) operations
                       fsck - perform a check of all ressources managed by wanda
                       help - print this help`)
   (def custom @"")
-  (eachk k (root-conf :subsystems)
-    (buffer/push custom "  " k " - " (get-in root-conf [:subsystems k :description]) "\n"))
-  (prin (string preinstalled "\n" custom))
-  (flush))
+  (if (root-conf :modules)
+    (do (eachk k (root-conf :modules)
+                 (buffer/push custom "  " k " - " (get-in root-conf [:modules k :description]) "\n"))
+        (prin (string preinstalled "\n" custom))
+        (flush))
+    (print preinstalled)))
 
 (defn main [myself & raw_args]
   (var root-conf @{})
@@ -657,8 +658,8 @@
   (case subcommand
     "wiki" (cli/wiki arch-dir root-conf)
     "w" (cli/wiki arch-dir root-conf)
-    "subsystem" (cli/subsystem arch-dir root-conf)
-    "ss" (cli/subsystem arch-dir root-conf)
+    "module" (cli/modules arch-dir root-conf)
+    "m" (cli/modules arch-dir root-conf)
     "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice raw_args 1 -1)] :p))
     "g" (os/exit (os/execute ["git" "-C" arch-dir ;(slice raw_args 1 -1)] :p))
     "help" (print-root-help arch-dir root-conf)
@@ -670,4 +671,4 @@
     "log" (cli/log arch-dir root-conf)
     "fsck" (cli/fsck arch-dir root-conf)
     nil (print-root-help arch-dir root-conf)
-    (cli/subsystem/execute arch-dir root-conf subcommand)))
+    (cli/modules/execute arch-dir root-conf subcommand)))
