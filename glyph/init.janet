@@ -414,19 +414,19 @@
         (print file-id))))
 
 (defn- config/load [arch-dir]
-  (def conf-path (path/join arch-dir ".wanda" "config.jdn"))
+  (def conf-path (path/join arch-dir ".glyph" "config.jdn"))
   (try (parse (slurp conf-path))
-       ([err] (error "Could not parse wanda config"))))
+       ([err] (error "Could not parse glyph config"))))
 
 (defn config/eval [arch-dir eval-func &opt commit-message]
-  (def conf-path (path/join arch-dir ".wanda" "config.jdn"))
+  (def conf-path (path/join arch-dir ".glyph" "config.jdn"))
   (with [lock (flock/acquire conf-path :block :exclusive)]
     (def old-conf (config/load arch-dir))
     (def new-conf (eval-func old-conf))
     (spit conf-path (string/format "%j" new-conf))
     (def git-conf {:arch-dir arch-dir})
     (git/loud git-conf "reset")
-    (git/loud git-conf "add" ".wanda/config.jdn")
+    (git/loud git-conf "add" ".glyph/config.jdn")
     (default commit-message "config: updated config")
     (git/loud git-conf "commit" "-m" commit-message)
     (flock/release lock)))
@@ -445,7 +445,7 @@
 (defn cli/modules/add [arch-dir root-conf]
   (def res
     (argparse/argparse
-      "Add a new module to the wanda archive"
+      "Add a new module to the glyph archive"
       "name" {:kind :option
               :required true
               :short "n"
@@ -461,7 +461,7 @@
   (unless res (os/exit 1))
   (module/add arch-dir root-conf (res "name") (res "path") (res "description"))
   (print `module was added to index. You can now add a .main script and manage it via git.
-         For examples for .main script check the wanda main repo at https://tasadar.net/tionis/wanda`))
+         For examples for .main script check the glyph main repo at https://tasadar.net/tionis/glyph`))
 
 (defn module/ls [arch-dir root-conf &opt glob-pattern]
   (default glob-pattern "*")
@@ -626,16 +626,15 @@
 
 (defn print-root-help [arch-dir root-conf]
   (def preinstalled `Available Subcommands:
-                      wiki - wiki module, use 'wanda wiki --help' for more information
-                      modules - manage your custom modules, use 'wanda module --help' for more information
+                      wiki - wiki module, use 'glyph wiki --help' for more information
+                      modules - manage your custom modules, use 'glyph module --help' for more information
                       git - execute git command on the arch repo
                       log $optional_integer - show a pretty printed log of the last $integer (default 10) operations
-                      fsck - perform a check of all ressources managed by wanda
+                      fsck - perform a check of all ressources managed by glyph
                       help - print this help`)
   (def custom @"")
   (if (root-conf :modules)
     (do (eachk k (root-conf :modules)
-                 (pp k)
                  (buffer/push custom "  " k " - " (get-in root-conf [:modules k :description]) "\n"))
         (prin (string preinstalled "\n" custom))
         (flush))
@@ -643,27 +642,27 @@
 
 (defn main [myself & raw_args]
   (var root-conf @{})
-  (def arch-dir (do (def env_arch_dir (os/getenv "WANDA_ARCH_DIR")) # TODO[branding] change this env var
+  (def arch-dir (do (def env_arch_dir (os/getenv "GLYPH_ARCH_DIR")) # TODO[branding] change this env var
                     (def env_arch_stat (if env_arch_dir (os/stat env_arch_dir) nil))
                     (if (and env_arch_dir (= (env_arch_stat :mode) :directory))
                         env_arch_dir
                         (get-default-arch-dir))))
-  (os/cd arch-dir) # TODO[branding] also change the default config.jdn location to remove wanda branding
-  (let [root-conf-path (path/join arch-dir ".wanda" "config.jdn") # TODO don't auto write a wanda config add a command for it
+  (os/cd arch-dir) # TODO[branding] also change the default config.jdn location to remove glyph branding
+  (let [root-conf-path (path/join arch-dir ".glyph" "config.jdn") # TODO don't auto write a glyph config add a command for it
         root-conf-stat (os/stat root-conf-path)]
         (if (or (not root-conf-stat) (not= (root-conf-stat :mode) :file))
             (do (set root-conf default-root-conf)
-                (let [wanda-path (path/join arch-dir ".wanda")
-                      wanda-stat (os/stat wanda-path)]
-                     (if (not wanda-stat)
-                         (os/mkdir wanda-path)))
+                (let [glyph-path (path/join arch-dir ".glyph")
+                      glyph-stat (os/stat glyph-path)]
+                     (if (not glyph-stat)
+                         (os/mkdir glyph-path)))
                 (spit root-conf-path root-conf)
                 (def git-conf {:arch-dir arch-dir})
                 (git git-conf "reset")
-                (git git-conf "add" ".wanda/config.jdn")
-                (git git-conf "commit" "-m" "wanda: initialized config"))
+                (git git-conf "add" ".glyph/config.jdn")
+                (git git-conf "commit" "-m" "glyph: initialized config"))
             (try (set root-conf (parse (slurp root-conf-path)))
-                 ([err] (eprint "Could not load wanda config: " err)
+                 ([err] (eprint "Could not load glyph config: " err)
                         (os/exit 1)))))
   (def subcommand (if (= (length raw_args) 0)
                     nil

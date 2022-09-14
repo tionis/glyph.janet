@@ -1,6 +1,6 @@
 (declare-project
-  :name "wanda"
-  :description "wiki/knowledgebase managment program"
+  :name "glyph"
+  :description "a personal data manager for the command line"
   #:lflags ["-static"]
   :dependencies  ["https://git.sr.ht/~pepe/jfzy" # TODO this can probably be removed, but is still required by jff
                   "https://tasadar.net/tionis/fuzzy-select.git" # TODO this needs UI improvements # TODO switch back to pepes version if changes are merged
@@ -12,13 +12,13 @@
                   #"https://github.com/janet-lang/sqlite3"
                   "https://github.com/andrewchambers/janet-uri"]) # TODO replace this with a peg based uri parser
 
-(declare-source :source ["wanda"])
+(declare-source :source ["glyph"])
 
 #(declare-native
   # :name "some-lib"
   # :source ["some-lib.c"])
 
 (declare-executable
-  :name "wanda"
-  :entry "wanda/init.janet"
+  :name "glyph"
+  :entry "glyph/init.janet"
   :install true)
