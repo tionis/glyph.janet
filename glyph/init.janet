@@ -643,11 +643,11 @@
                                     (buffer/push custom "  " k " - " (get-in root-conf [:modules k :description]) "\n")))
   (if (root-conf :aliases) (eachk k (root-conf :aliases)
                                     (buffer/push custom "  " k " - alias for" (get-in root-conf [:aliases k :target]) "\n")))
-  (if (= (length custom) 0))
+  (if (= (length custom) 0)
     (print preinstalled)
-    (do ((prin (string preinstalled "\n" custom))) (flush))))
+    (do (prin (string preinstalled "\n" custom)) (flush))))
 
-(defn main [myself & raw_args]
+(defn main [&]
   (var root-conf @{})
   # TODO read myself and check if it matches any module or alias, if it does use it as first arg and proceed as normal
   # TODO add command to create symlinks for module or alias
@@ -673,19 +673,24 @@
             (try (set root-conf (parse (slurp root-conf-path)))
                  ([err] (eprint "Could not load glyph config: " err)
                         (os/exit 1)))))
-  (def subcommand (if (= (length raw_args) 0)
-                    nil
-                    (do (setdyn :args @[myself ;(slice raw_args 1 -1)])
-                        (raw_args 0))))
+  (let [runtime-name (path/basename (first (dyn :args)))]
+    (if ((merge (if (root-conf :modules) (root-conf :modules) {})
+                (if (root-conf :aliases) (root-conf :aliases) {}))
+         runtime-name)
+        (do (array/insert (dyn :args) 0 "glyph")
+            (put (dyn :args) 1 runtime-name))))
+  (def subcommand (get (dyn :args) 1 nil))
+  (array/remove (dyn :args) 1)
   (case subcommand
+    # TODO add init command to write out default config
     "wiki" (cli/wiki arch-dir root-conf)
     "w" (cli/wiki arch-dir root-conf)
     "modules" (cli/modules arch-dir root-conf)
     "module" (cli/modules arch-dir root-conf)
     "alias" (cli/alias arch-dir root-conf)
     "m" (cli/modules arch-dir root-conf)
-    "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice raw_args 1 -1)] :p))
-    "g" (os/exit (os/execute ["git" "-C" arch-dir ;(slice raw_args 1 -1)] :p))
+    "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice (dyn :args) 1 -1)] :p))
+    "g" (os/exit (os/execute ["git" "-C" arch-dir ;(slice (dyn :args) 1 -1)] :p))
     "help" (print-root-help arch-dir root-conf)
     "--help" (print-root-help arch-dir root-conf)
     "-h" (print-root-help arch-dir root-conf)
