@@ -505,6 +505,7 @@
   (print "module removed from index, if the module-data still exists please remove it now."))
 
 (defn cli/modules/execute [arch-dir root-conf module-name]
+  # TODO also look up aliases
   (if (get-in root-conf [:modules module-name])
       (do (def module-path (path/join arch-dir (get-in root-conf [:modules module-name :path])))
           (def prev-dir (os/cwd))
@@ -533,6 +534,10 @@
     "rm" (cli/modules/rm arch-dir root-conf)
     "help" (cli/modules/help arch-dir root-conf)
     (cli/modules/execute arch-dir root-conf subcommand)))
+
+(defn cli/alias [arch-dir root-conf]
+  (error "not implemented yet") # TODO
+  )
 
 (defn cli/wiki [arch-dir root-conf]
   (def res (argparse/argparse
@@ -630,18 +635,22 @@
                       modules - manage your custom modules, use 'glyph module --help' for more information
                       git - execute git command on the arch repo
                       log $optional_integer - show a pretty printed log of the last $integer (default 10) operations
+                      alias - manage your aliases
                       fsck - perform a check of all ressources managed by glyph
                       help - print this help`)
   (def custom @"")
-  (if (root-conf :modules)
-    (do (eachk k (root-conf :modules)
-                 (buffer/push custom "  " k " - " (get-in root-conf [:modules k :description]) "\n"))
-        (prin (string preinstalled "\n" custom))
-        (flush))
-    (print preinstalled)))
+  (if (root-conf :modules) (eachk k (root-conf :modules)
+                                    (buffer/push custom "  " k " - " (get-in root-conf [:modules k :description]) "\n")))
+  (if (root-conf :aliases) (eachk k (root-conf :aliases)
+                                    (buffer/push custom "  " k " - alias for" (get-in root-conf [:aliases k :target]) "\n")))
+  (if (= (length custom) 0))
+    (print preinstalled)
+    (do ((prin (string preinstalled "\n" custom))) (flush))))
 
 (defn main [myself & raw_args]
   (var root-conf @{})
+  # TODO read myself and check if it matches any module or alias, if it does use it as first arg and proceed as normal
+  # TODO add command to create symlinks for module or alias
   (def arch-dir (do (def env_arch_dir (os/getenv "GLYPH_ARCH_DIR")) # TODO[branding] change this env var
                     (def env_arch_stat (if env_arch_dir (os/stat env_arch_dir) nil))
                     (if (and env_arch_dir (= (env_arch_stat :mode) :directory))
@@ -673,6 +682,7 @@
     "w" (cli/wiki arch-dir root-conf)
     "modules" (cli/modules arch-dir root-conf)
     "module" (cli/modules arch-dir root-conf)
+    "alias" (cli/alias arch-dir root-conf)
     "m" (cli/modules arch-dir root-conf)
     "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice raw_args 1 -1)] :p))
     "g" (os/exit (os/execute ["git" "-C" arch-dir ;(slice raw_args 1 -1)] :p))
