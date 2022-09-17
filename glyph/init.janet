@@ -631,12 +631,11 @@
 
 (defn print-root-help [arch-dir root-conf]
   (def preinstalled `Available Subcommands:
-                      wiki - wiki module, use 'glyph wiki --help' for more information
                       modules - manage your custom modules, use 'glyph module --help' for more information
                       git - execute git command on the arch repo
                       log $optional_integer - show a pretty printed log of the last $integer (default 10) operations
                       alias - manage your aliases
-                      fsck - perform a check of all ressources managed by glyph
+                      fsck - perform a check of arch repo
                       help - print this help`)
   (def custom @"")
   (if (root-conf :modules) (eachk k (root-conf :modules)
@@ -656,6 +655,7 @@
                     (if (and env_arch_dir (= (env_arch_stat :mode) :directory))
                         env_arch_dir
                         (get-default-arch-dir))))
+  # TODO add default wiki module to root-conf
   (os/cd arch-dir) # TODO[branding] also change the default config.jdn location to remove glyph branding
   (let [root-conf-path (path/join arch-dir ".glyph" "config.jdn") # TODO don't auto write a glyph config add a command for it
         root-conf-stat (os/stat root-conf-path)]
@@ -673,6 +673,8 @@
             (try (set root-conf (parse (slurp root-conf-path)))
                  ([err] (eprint "Could not load glyph config: " err)
                         (os/exit 1)))))
+  # TODO never overwrite user config, not even in-memory
+  (put-in root-conf [:modules "wiki"] {:description "default wiki implementation" :path "wiki"}) # TODO add special handler here?
   (let [runtime-name (path/basename (first (dyn :args)))]
     (if ((merge (if (root-conf :modules) (root-conf :modules) {})
                 (if (root-conf :aliases) (root-conf :aliases) {}))
