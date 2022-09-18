@@ -504,17 +504,6 @@
   (module/rm arch-dir root-conf (first (res :default)))
   (print "module removed from index, if the module-data still exists please remove it now."))
 
-(defn cli/modules/execute [arch-dir root-conf module-name]
-  # TODO also look up aliases
-  (if (get-in root-conf [:modules module-name])
-      (do (def module-path (path/join arch-dir (get-in root-conf [:modules module-name :path])))
-          (def prev-dir (os/cwd))
-          (defer (os/cd prev-dir)
-            (os/cd module-path)
-            (os/execute [".main" ;(slice (dyn :args) 1 -1)])))
-      (do (eprint "module does not exist, use help to list existing ones")
-          (os/exit 1))))
-
 (defn cli/modules/help [arch-dir root-conf]
   (print `Available Subcommands:
            add - add a new module
@@ -522,18 +511,6 @@
            rm - remove a module
            help - show this help`))
 
-(defn cli/modules [arch-dir root-conf]
-  (if (<= (length (dyn :args)) 1)
-      (do (cli/modules/ls arch-dir root-conf)
-          (os/exit 0)))
-  (def subcommand ((dyn :args) 1))
-  (setdyn :args [((dyn :args) 0) ;(slice (dyn :args) 2 -1)])
-  (case subcommand
-    "add" (cli/modules/add arch-dir root-conf)
-    "ls" (cli/modules/ls arch-dir root-conf)
-    "rm" (cli/modules/rm arch-dir root-conf)
-    "help" (cli/modules/help arch-dir root-conf)
-    (cli/modules/execute arch-dir root-conf subcommand)))
 
 (defn cli/alias [arch-dir root-conf]
   (error "not implemented yet") # TODO
@@ -614,28 +591,46 @@
     nil (edit/interactive config)
     _ (print "Invalid syntax!")))
 
-(defn cli/log [arch-dir root-conf]
-  (def count (if (> (length (dyn :args)) 1) ((dyn :args) 1) "10"))
-  (os/execute ["git"
-               "-C"
-               arch-dir
-               "log"
-               "--pretty=format:%C(magenta)%h%Creset -%C(red)%d%Creset %s %C(dim green)(%cr) [%an]"
-               "--abbrev-commit"
-               (string "-" count)] :p))
-
 (defn cli/fsck [arch-dir root-conf]
   (os/execute ["git" "-C" arch-dir "fsck"] :p))
+
+(defn cli/modules/execute [arch-dir root-conf name]
+  # TODO also look up aliases
+  (case name # Check if module is a built-in one
+    "wiki" (cli/wiki arch-dir root-conf)
+    (let [alias (get-in root-conf [:aliases name])
+          module-name (if alias (alias :target) name)]
+      (if (get-in root-conf [:modules module-name] {})
+          (do (def module-path (path/join arch-dir (get-in root-conf [:modules module-name :path])))
+              (def prev-dir (os/cwd))
+              (defer (os/cd prev-dir)
+               (os/cd module-path)
+               (os/execute [".main" ;(slice (dyn :args) 1 -1)])))
+          (do (eprint "module does not exist, use help to list existing ones")
+              (os/exit 1))))))
+
+(defn cli/modules [arch-dir root-conf]
+  (if (<= (length (dyn :args)) 1)
+      (do (cli/modules/ls arch-dir root-conf)
+          (os/exit 0)))
+  (def subcommand ((dyn :args) 1))
+  (setdyn :args [((dyn :args) 0) ;(slice (dyn :args) 2 -1)])
+  (case subcommand
+    "add" (cli/modules/add arch-dir root-conf)
+    "ls" (cli/modules/ls arch-dir root-conf)
+    "rm" (cli/modules/rm arch-dir root-conf)
+    "help" (cli/modules/help arch-dir root-conf)
+    (cli/modules/execute arch-dir root-conf subcommand)))
 
 (def default-root-conf {:wiki-dir "wiki" :modules []})
 
 (defn print-root-help [arch-dir root-conf]
   (def preinstalled `Available Subcommands:
                       modules - manage your custom modules, use 'glyph module --help' for more information
-                      git - execute git command on the arch repo
-                      log $optional_integer - show a pretty printed log of the last $integer (default 10) operations
                       alias - manage your aliases
-                      fsck - perform a check of arch repo
+                      git - execute git command on the arch repo
+                      sync - sync the glyph archive
+                      fsck - perform a filesystem check of arch repo
                       help - print this help`)
   (def custom @"")
   (if (root-conf :modules) (eachk k (root-conf :modules)
@@ -676,8 +671,7 @@
   # TODO never overwrite user config, not even in-memory
   (put-in root-conf [:modules "wiki"] {:description "default wiki implementation" :path "wiki"}) # TODO add special handler here?
   (let [runtime-name (path/basename (first (dyn :args)))]
-    (if ((merge (if (root-conf :modules) (root-conf :modules) {})
-                (if (root-conf :aliases) (root-conf :aliases) {}))
+    (if ((merge (get root-conf :modules {}) (get root-conf :aliases {}))
          runtime-name)
         (do (array/insert (dyn :args) 0 "glyph")
             (put (dyn :args) 1 runtime-name))))
@@ -685,21 +679,14 @@
   (array/remove (dyn :args) 1)
   (case subcommand
     # TODO add init command to write out default config
-    "wiki" (cli/wiki arch-dir root-conf)
-    "w" (cli/wiki arch-dir root-conf)
     "modules" (cli/modules arch-dir root-conf)
-    "module" (cli/modules arch-dir root-conf)
     "alias" (cli/alias arch-dir root-conf)
-    "m" (cli/modules arch-dir root-conf)
     "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice (dyn :args) 1 -1)] :p))
-    "g" (os/exit (os/execute ["git" "-C" arch-dir ;(slice (dyn :args) 1 -1)] :p))
     "help" (print-root-help arch-dir root-conf)
     "--help" (print-root-help arch-dir root-conf)
     "-h" (print-root-help arch-dir root-conf)
     "" (print-root-help arch-dir root-conf)
     "sync" (sync {:arch-dir arch-dir})
-    "s" (sync {:arch-dir arch-dir})
-    "log" (cli/log arch-dir root-conf)
-    "fsck" (cli/fsck arch-dir root-conf)
+    "fsck" (cli/fsck arch-dir root-conf) # TODO required?
     nil (print-root-help arch-dir root-conf)
     (cli/modules/execute arch-dir root-conf subcommand)))
