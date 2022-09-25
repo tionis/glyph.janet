@@ -7,7 +7,7 @@
 #(use ./log-item) # disabled due to being unfinished
 (import ./graph :export true)
 (import fzy :as "fzy" :export true)
-(import jff/ui :as "jff" :export true)
+(import jeff/ui :as "jff" :export true)
 (import ./markdown :as "md" :export true)
 (import ./filesystem :as "fs" :export true)
 (import ./util :export true)
@@ -600,7 +600,7 @@
     "wiki" (cli/wiki arch-dir root-conf)
     (let [alias (get-in root-conf [:aliases name])
           module-name (if alias (alias :target) name)]
-      (if (get-in root-conf [:modules module-name] {})
+      (if (get-in root-conf [:modules module-name] nil)
           (do (def module-path (path/join arch-dir (get-in root-conf [:modules module-name :path])))
               (def prev-dir (os/cwd))
               (defer (os/cd prev-dir)
