@@ -605,7 +605,9 @@
               (def prev-dir (os/cwd))
               (defer (os/cd prev-dir)
                (os/cd module-path)
-               (os/execute [".main" ;(slice (dyn :args) 1 -1)])))
+               (os/execute [".main" ;(slice (dyn :args) 1 -1)]))
+              # TODO check if there are different commits checked out in submodule and commit them with an "updated $module_name_or_path" message
+              )
           (do (eprint "module does not exist, use help to list existing ones")
               (os/exit 1))))))
 
