@@ -114,7 +114,7 @@
 (def patt_git_status_line "PEG-Pattern that parsed one line of git status --porcellain=v1 into a tuple of changetype and filename"
   (peg/compile ~(* (opt " ") (capture (between 1 2 (* (not " ") 1))) " " (capture (some 1)))))
 
-(defn get-changes
+(defn get-changes # TODO migrate to porcelain v2 to detect submodule states https://git-scm.com/docs/git-status#_changed_tracked_entries
   "give a config get the changes in the working tree of the git repo"
   [git-repo-dir]
   (def ret @[])
@@ -608,10 +608,10 @@
               (defer (os/cd prev-dir)
                 (os/cd module-path)
                 (os/execute [".main" ;(slice (dyn :args) 1 -1)]))
-               (if (index-of name (map |($0 1) (get-changes arch-dir)))
-                   (do (git config "add" name)
-                       (git config "commit" "-m" (string "updated " name))
-                       (git config "push"))))
+              (if (index-of name (map |($0 1) (get-changes arch-dir))) # TODO this triggers for modified content and new commits -> only trigger on new commits
+                  (do (git config "add" name)
+                      (git config "commit" "-m" (string "updated " name))
+                      (git config "push"))))
           (do (eprint "module does not exist, use help to list existing ones")
               (os/exit 1))))))
 
