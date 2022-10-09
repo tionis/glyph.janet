@@ -114,11 +114,11 @@
 (def patt_git_status_line "PEG-Pattern that parsed one line of git status --porcellain=v1 into a tuple of changetype and filename"
   (peg/compile ~(* (opt " ") (capture (between 1 2 (* (not " ") 1))) " " (capture (some 1)))))
 
-(defn get_changes
+(defn get-changes
   "give a config get the changes in the working tree of the git repo"
-  [config]
+  [git-repo-dir]
   (def ret @[])
-  (each line (string/split "\n" (git config "status" "--porcelain=v1"))
+  (each line (string/split "\n" (git {:arch-dir git-repo-dir} "status" "--porcelain=v1"))
     (if (and line (not= line ""))
       (let [result (peg/match patt_git_status_line line)]
         (array/push ret [(git_status_codes (result 0)) (result 1)]))))
@@ -233,7 +233,7 @@
       (print (slurp file_path))
       (do
         (os/execute [(config :editor) file_path] :p)
-        (def change_count (length (get_changes config)))
+        (def change_count (length (get-changes (config :arch-dir))))
         # TODO smarter commit
         (cond
           (= change_count 0) (do (print "No changes, not commiting..."))
@@ -596,6 +596,8 @@
 
 (defn cli/modules/execute [arch-dir root-conf name]
   # TODO also look up aliases
+  (def config {:arch-dir arch-dir})
+  (git/async config "pull")
   (case name # Check if module is a built-in one
     "wiki" (cli/wiki arch-dir root-conf)
     (let [alias (get-in root-conf [:aliases name])
@@ -606,8 +608,10 @@
               (defer (os/cd prev-dir)
                (os/cd module-path)
                (os/execute [".main" ;(slice (dyn :args) 1 -1)]))
-              # TODO check if there are different commits checked out in submodule and commit them with an "updated $module_name_or_path" message
-              )
+               (if (index-of name (map |($0 1) (get-changes module-path)))
+                   (do (git config "add" name)
+                       (git config "commit" "-m" (string "updated " name))
+                       (git config "push"))))
           (do (eprint "module does not exist, use help to list existing ones")
               (os/exit 1))))))
 
