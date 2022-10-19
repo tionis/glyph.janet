@@ -609,7 +609,7 @@
                 (os/cd module-path)
                 (os/execute [".main" ;(slice (dyn :args) 1 -1)]))
               (if (index-of name (map |($0 1) (get-changes arch-dir))) # TODO this triggers for modified content and new commits -> only trigger on new commits
-                  (do (git config "add" name)
+                  (do (git config "add" name) # TODO remove this auto commit once 
                       (git config "commit" "-m" (string "updated " name))
                       (git config "push"))))
           (do (eprint "module does not exist, use help to list existing ones")
