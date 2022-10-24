@@ -11,6 +11,7 @@
 (import ./markdown :as "md" :export true)
 (import ./filesystem :as "fs" :export true)
 (import ./util :export true)
+(import ./git :export true)
 
 # old hack as workaround https://github.com/janet-lang/janet/issues/995 is solved
 # will keep this here for future reference
@@ -77,64 +78,6 @@
                                     (if (= ((os/stat x) :mode) :directory)
                                         (indexify_dir x)))))
 
-(defn exec-slurp
-   "Read stdout of subprocess and return it trimmed in a string." 
-   [& args]
-   (when (dyn :verbose)
-     (flush)
-     (print "(exec-slurp " ;(interpose " " args) ")"))
-   (def proc (os/spawn args :px {:out :pipe}))
-   (def out (get proc :out))
-   (def buf @"")
-   (ev/gather
-     (:read out :all buf)
-     (:wait proc))
-   (string/trimr buf))
-
-(defn git # TODO put the git handling stuff into its own module
-  "given a config and some arguments execute the git subcommand on wiki"
-  [config & args]
-  (exec-slurp "git" "-C" (config :arch-dir) ;args))
-
-(defn git/loud [config & args] (os/execute ["git" "-C" (config :arch-dir) ;args] :p))
-
-(def git_status_codes
-  "a map describing the meaning of the git status --porcelain=v1 short codes"
-  {"A" :added
-   "D" :deleted
-   "M" :modified
-   "R" :renamed
-   "C" :copied
-   "I" :ignored
-   "?" :untracked
-   "T" :typechange
-   "X" :unreadable
-   "??" :unknown})
-
-(def patt_git_status_line "PEG-Pattern that parsed one line of git status --porcellain=v1 into a tuple of changetype and filename"
-  (peg/compile ~(* (opt " ") (capture (between 1 2 (* (not " ") 1))) " " (capture (some 1)))))
-
-(defn get-changes # TODO migrate to porcelain v2 to detect submodule states https://git-scm.com/docs/git-status#_changed_tracked_entries
-  "give a config get the changes in the working tree of the git repo"
-  [git-repo-dir]
-  (def ret @[])
-  (each line (string/split "\n" (git {:arch-dir git-repo-dir} "status" "--porcelain=v1"))
-    (if (and line (not= line ""))
-      (let [result (peg/match patt_git_status_line line)]
-        (array/push ret [(git_status_codes (result 0)) (result 1)]))))
-  ret)
-
-# maybe use c wrapper and c code as seen here:
-# https://man7.org/tlpi/code/online/book/daemons/become_daemon.c.html
-# this may be blocked until https://github.com/janet-lang/janet/issues/995 is solved
-(defn git/async
-  "given a config and some arguments execute the git subcommand on wiki asynchroniously"
-  [config & args]
-  (def null_file (get-null-file))
-  (def fout (os/open null_file :w))
-  (def ferr (os/open null_file :w))
-  (os/spawn ["git" "-C" (config :arch-dir ) ;args] :pd {:out fout :err ferr}))
-
 (defn commit
   "commit staged files, ask user based on config for message, else fallback to default_message"
   [config default_message]
@@ -143,9 +86,9 @@
         (do (prin "Commit Message: ")
             (def message (string/trim (file/read stdin :line)))
             (if (= message "")
-                (git config "commit" "-m" default_message)
-                (git config "commit" "-m" message)))
-        (git config "commit" "-m" default_message))))
+                (git/slurp (config :arch-dir) "commit" "-m" default_message)
+                (git/slurp (config :arch-dir) "commit" "-m" message)))
+        (git/slurp (config :arch-dir) "commit" "-m" default_message))))
 
 (def positional_args_help_string
   (string `Command to run or document to open
@@ -184,7 +127,7 @@
       (map |((peg/match ~(* ,p (? (+ "/" "\\")) (capture (any 1))) $0) 0)
             (filter |(is-doc $0) # TODO migrate away from filesystem.janet
                     (fs/list-all-files p))))) # TODO migration to the inclusion of file endings and using the get-doc-path function to get a full valid wiki path from an ambigous pathless link
-  #(peg/match ls-files-peg (string (git config "ls-files")) "\n")) # TODO implement this probably fast ways
+  #(peg/match ls-files-peg (string (git/slurp config "ls-files")) "\n")) # TODO implement this probably fast ways
   # - maybe use git ls-files as it is faster?
   # - warning: ls-files does not print special chars but puts the paths between " and escapes the special chars -> problem with newlines?
   # - problem: this is a bit more complex and I would have to fix my PEG above to correctly parse the output again
@@ -207,9 +150,9 @@
 (defn rm
   "delete doc specified by path"
   [config file] # TODO check via graph what links are broken by that and warn user, ask them if they still want to continue (do not ask if (get-in config [:argparse "force"]) is true)
-  (git config "rm" (string file ".md"))
+  (git/slurp (config :arch-dir) "rm" (string file ".md"))
   (commit config (string "wiki: deleted " file))
-  (if (config :sync) (git/async config "push")))
+  (if (config :sync) (git/async (config :arch-dir) "push")))
 
 (defn rm/interactive
   "delete document select interactivly"
@@ -233,13 +176,13 @@
       (print (slurp file_path))
       (do
         (os/execute [(config :editor) file_path] :p)
-        (def change_count (length (get-changes (config :arch-dir))))
+        (def change_count (length (git/changes (config :arch-dir))))
         # TODO smarter commit
         (cond
           (= change_count 0) (do (print "No changes, not commiting..."))
-          (= change_count 1) (do (git config "add" "-A") (commit config (string "wiki: updated " file)))
-          (> change_count 1) (do (git config "add" "-A") (commit config (string "wiki: session from " file))))
-        (if (> change_count 0) (if (config :sync)(git/async config "push"))))))
+          (= change_count 1) (do (git/slurp (config :arch-dir) "add" "-A") (commit config (string "wiki: updated " file)))
+          (> change_count 1) (do (git/slurp (config :arch-dir) "add" "-A") (commit config (string "wiki: session from " file))))
+        (if (> change_count 0) (if (config :sync)(git/async (config :arch-dir) "push"))))))
 
 (defn trim-prefix [prefix str]
   (if (string/has-prefix? prefix str)
@@ -256,7 +199,7 @@
   [config query]
   (def found_files (map |(trim-prefix (string (path/basename (config :wiki-dir)) "/") $0)
                      (filter |(is-doc $0)
-                           (string/split "\n" (git config "grep" "-i" "-l" query ":(exclude).obsidian/*" "./*")))))
+                           (string/split "\n" (git/slurp (config :arch-dir) "grep" "-i" "-l" query ":(exclude).obsidian/*" "./*")))))
   (def selected_file (file/select config :files-override found_files))
   (if selected_file
       (edit config selected_file)
@@ -298,11 +241,11 @@
         (flush)
         (fs/create-directories target_parent_dir)
         (print "Done.")))
-  (git config "mv" source_path target_path)
-  (git config "add" source_path)
-  (git config "add" target_path)
+  (git/slurp (config :arch-dir) "mv" source_path target_path)
+  (git/slurp (config :arch-dir) "add" source_path)
+  (git/slurp (config :arch-dir) "add" target_path)
   (commit config (string "wiki: moved " source " to " target))
-  (if (config :sync) (git/async config "push")))
+  (if (config :sync) (git/async (config :arch-dir) "push")))
 
 (def patt_md_without_header "PEG-Pattern that captures the content of a markdown file without the metadata header"
   (peg/compile ~(* (opt (* "---\n" (any (* (not "\n---\n") 1)) "\n---\n" (opt "\n"))) (capture (* (any 1))))))
@@ -560,7 +503,7 @@
     (put config :sync true))
   (if (res "wiki_dir")
       (do (put config :wiki-dir (res "wiki_dir"))
-          (put config :arch-dir (exec-slurp "git" "-C" (config :wiki-dir) "rev-parse" "--show-toplevel")))
+          (put config :arch-dir (sh/exec-slurp "git" "-C" (config :wiki-dir) "rev-parse" "--show-toplevel")))
       (do (put config :wiki-dir (path/join arch-dir (root-conf :wiki-dir)))
           (put config :arch-dir arch-dir)))
   (let [wiki_dir_stat (os/stat (config :wiki-dir))]
@@ -575,7 +518,7 @@
   (if (config :sync)
       (if (and (not (res "no_pull"))
                (not (= args @["sync"]))) # ensure pull is not executed two times for manual sync
-          (git/async config "pull")))
+          (git/async (config :arch-dir) "pull")))
   (match args
     ["help"] (print_command_help)
     ["search" & search_terms] (search config (string/join search_terms " "))
@@ -596,8 +539,7 @@
 
 (defn cli/modules/execute [arch-dir root-conf name]
   # TODO also look up aliases
-  (def config {:arch-dir arch-dir})
-  (git/async config "pull")
+  (git/async arch-dir "pull")
   (case name # Check if module is a built-in one
     "wiki" (cli/wiki arch-dir root-conf)
     (let [alias (get-in root-conf [:aliases name])
@@ -608,10 +550,10 @@
               (defer (os/cd prev-dir)
                 (os/cd module-path)
                 (os/execute [".main" ;(slice (dyn :args) 1 -1)]))
-              (if (index-of name (map |($0 1) (get-changes arch-dir))) # TODO this triggers for modified content and new commits -> only trigger on new commits
-                  (do (git config "add" name) # TODO remove this auto commit once 
-                      (git config "commit" "-m" (string "updated " name))
-                      (git config "push"))))
+              (if ((git/changes arch-dir) name) # TODO this triggers for modified content and new commits -> only trigger on new commits
+                  (do (git/slurp arch-dir "add" name) # TODO remove this auto commit once 
+                      (git/slurp arch-dir "commit" "-m" (string "updated " name))
+                      (git/slurp arch-dir "push"))))
           (do (eprint "module does not exist, use help to list existing ones")
               (os/exit 1))))))
 
@@ -667,10 +609,9 @@
                      (if (not glyph-stat)
                          (os/mkdir glyph-path)))
                 (spit root-conf-path root-conf)
-                (def git-conf {:arch-dir arch-dir})
-                (git git-conf "reset")
-                (git git-conf "add" ".glyph/config.jdn")
-                (git git-conf "commit" "-m" "glyph: initialized config"))
+                (git/slurp arch-dir "reset")
+                (git/slurp arch-dir "add" ".glyph/config.jdn")
+                (git/slurp arch-dir "commit" "-m" "glyph: initialized config"))
             (try (set root-conf (parse (slurp root-conf-path)))
                  ([err] (eprint "Could not load glyph config: " err)
                         (os/exit 1)))))
