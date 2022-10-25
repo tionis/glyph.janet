@@ -176,7 +176,7 @@
       (print (slurp file_path))
       (do
         (os/execute [(config :editor) file_path] :p)
-        (def change_count (length (filter |(peg/match ~{:main (sequence "wiki/" (any 1) -1)} $0) (keys (git/changes (config :arch-dir)))))) # TODO wiki path is hardcoded here, this should be migrated later (will not be necessary once wiki is an ordinary module)
+        (def change_count (length (filter |(peg/match ~{:main (sequence "wiki/" (any 1) -1)} (string/trim $0)) (keys (git/changes (config :arch-dir)))))) # TODO wiki path is hardcoded here, this should be migrated later (will not be necessary once wiki is an ordinary module)
         # TODO smarter commit
         (cond
           (= change_count 0) (do (print "No changes, not commiting..."))
