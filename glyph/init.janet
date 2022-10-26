@@ -367,11 +367,10 @@
     (def old-conf (config/load arch-dir))
     (def new-conf (eval-func old-conf))
     (spit conf-path (string/format "%j" new-conf))
-    (def git-conf {:arch-dir arch-dir})
-    (git/loud git-conf "reset")
-    (git/loud git-conf "add" ".glyph/config.jdn")
+    (git/loud arch-dir "reset")
+    (git/loud arch-dir "add" ".glyph/config.jdn")
     (default commit-message "config: updated config")
-    (git/loud git-conf "commit" "-m" commit-message)
+    (git/loud arch-dir "commit" "-m" commit-message)
     (flock/release lock)))
 
 (defn module/add [arch-dir root-conf name path description]
@@ -444,6 +443,10 @@
       :default {:kind :accumulate}))
   (unless res (os/exit 1))
   (if (= (length (res :default)) 0) (do (print "Specify module to remove!") (os/exit 1)))
+  (def module-name ((res :default) 0))
+  (if (not (get-in root-conf [:modules module-name])) (do (print "Module " module-name " not found, aborting...") (os/exit 1)))
+  (git/loud arch-dir "submodule" "deinit" "-f" (get-in root-conf [:modules module-name :path]))
+  (sh/rm (path/join arch-dir ".git" "modules" (get-in root-conf [:modules module-name :path])))
   (module/rm arch-dir root-conf (first (res :default)))
   (print "module removed from index, if the module-data still exists please remove it now."))
 
@@ -452,8 +455,9 @@
            add - add a new module
            ls - list modules
            rm - remove a module
+           init - initialize an existing module
+           deinit - deinitialize and existing module
            help - show this help`))
-
 
 (defn cli/alias [arch-dir root-conf]
   (error "not implemented yet") # TODO
@@ -539,6 +543,8 @@
 
 (defn cli/modules/execute [arch-dir root-conf name]
   # TODO also look up aliases
+  # TODO check if module is downloaded
+  # if not show error message
   (git/async arch-dir "pull")
   (case name # Check if module is a built-in one
     "wiki" (cli/wiki arch-dir root-conf)
@@ -557,6 +563,19 @@
           (do (eprint "module does not exist, use help to list existing ones")
               (os/exit 1))))))
 
+(defn cli/modules/init [arch-dir root-conf]
+  (if (= (length (dyn :args)) 1) (do (print "Specify module to initialize by name, aborting...") (os/exit 1)))
+  (def module-name ((dyn :args) 1))
+  (if (not (get-in root-conf [:modules module-name])) (do (print "Module " module-name " not found, aborting...") (os/exit 1)))
+  (git/loud arch-dir "submodule" "update" "--init" (get-in root-conf [:modules module-name :path])))
+
+(defn cli/modules/deinit [arch-dir root-conf]
+  (if (= (length (dyn :args)) 1) (do (print "Specify module to initialize by name, aborting...") (os/exit 1)))
+  (def module-name ((dyn :args) 1))
+  (if (not (get-in root-conf [:modules module-name])) (do (print "Module " module-name " not found, aborting...") (os/exit 1)))
+  (git/loud arch-dir "submodule" "deinit" "-f" (get-in root-conf [:modules module-name :path]))
+  (sh/rm (path/join arch-dir ".git" "modules" (get-in root-conf [:modules module-name :path]))))
+
 (defn cli/modules [arch-dir root-conf]
   (if (<= (length (dyn :args)) 1)
       (do (cli/modules/ls arch-dir root-conf)
@@ -565,6 +584,8 @@
   (setdyn :args [((dyn :args) 0) ;(slice (dyn :args) 2 -1)])
   (case subcommand
     "add" (cli/modules/add arch-dir root-conf)
+    "init" (cli/modules/init arch-dir root-conf)
+    "deinit" (cli/modules/deinit arch-dir root-conf)
     "ls" (cli/modules/ls arch-dir root-conf)
     "rm" (cli/modules/rm arch-dir root-conf)
     "help" (cli/modules/help arch-dir root-conf)
