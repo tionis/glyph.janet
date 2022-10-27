@@ -53,3 +53,14 @@
   (def fout (os/open null_file :w))
   (def ferr (os/open null_file :w))
   (os/spawn ["git" "-C" dir ;args] :pd {:out fout :err ferr}))
+
+(def- submodules-status-line-peg "pattern to parse a line from git submodules status for it's submodule path"
+  (peg/compile ~(* (+ " " "+" "-") (40 :w) " " (<- (to (+ " " -1))) (? (* " " (to -1))))))
+
+(defn ls-submodules
+  "lists submodule paths in the repo at dir, if recursive is true this is done recursivly"
+  [dir &named recursive]
+  (def lines (string/split "\n" (if recursive
+                                  (slurp dir "submodule" "status" "--recursive")
+                                  (slurp dir "submodule" "status"))))
+  (map |(first (peg/match submodules-status-line-peg $0)) lines))
