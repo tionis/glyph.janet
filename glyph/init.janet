@@ -557,9 +557,9 @@
                 (os/cd module-path)
                 (os/execute [".main" ;(slice (dyn :args) 1 -1)]))
               (if ((git/changes arch-dir) name) # TODO this triggers for modified content and new commits -> only trigger on new commits
-                  (do (git/slurp arch-dir "add" name) # TODO remove this auto commit once 
-                      (git/slurp arch-dir "commit" "-m" (string "updated " name))
-                      (git/slurp arch-dir "push"))))
+                  (do (git/loud arch-dir "add" name) # TODO remove this auto commit once 
+                      (git/loud arch-dir "commit" "-m" (string "updated " name))
+                      (git/async arch-dir "push"))))
           (do (eprint "module does not exist, use help to list existing ones")
               (os/exit 1))))))
 
