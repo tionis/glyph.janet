@@ -7,7 +7,7 @@
 #(use ./log-item) # disabled due to being unfinished
 (import ./graph :export true)
 (import fzy :as "fzy" :export true)
-(import jeff/ui :as "jff" :export true)
+(import jeff/ui :as "jeff" :export true)
 (import ./markdown :as "md" :export true)
 (import ./filesystem :as "fs" :export true)
 (import ./util :export true)
@@ -135,7 +135,7 @@
 (defn interactive-select
   "let user interactivly select an element of the given array"
   [arr]
-  (jff/choose "" arr :keywords? true))
+  (jeff/choose "" arr :keywords? true))
 
 (defn file/select
   "let user interactivly select a file, optionally accepts a files-override for a custom file set and preview-command to show the output of in a side window for the currently selected file"
