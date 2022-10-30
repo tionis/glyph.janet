@@ -1,7 +1,6 @@
 (declare-project
   :name "glyph"
   :description "a personal data manager for the command line"
-  #:lflags ["-static"]
   :dependencies  ["https://git.sr.ht/~pepe/jfzy" # TODO this can probably be removed, but is still required by jff
                   "https://tasadar.net/tionis/jeff.git" # TODO this needs UI improvements
                   "https://github.com/janet-lang/spork"
@@ -20,5 +19,6 @@
 
 (declare-executable
   :name "glyph"
+  :lflags ["-static"]
   :entry "glyph/init.janet"
   :install true)
