@@ -30,3 +30,11 @@
   (if (= selected ".")
       (shell/root module-dir)
       (shell/submodule module-dir selected)))
+
+# TODO implement these helpers
+(defn generic/sync [&opt target])
+(defn generic/fsck [])
+(defn generic/setup [])
+(defn generic/bundle [])
+(defn generic/glyph-info [supported-operations]
+  (printf "%j" {:supported (if supported-operations supported-operations [:sync :fsck :setup :bundle])}))
