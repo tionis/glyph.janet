@@ -11,17 +11,22 @@
           (git/loud module-dir "commit" "-m" "updated contents manually in shell")
           (git/async module-dir "push"))))
 
-(defn shell/submodule [module-dir submodule]
+(defn shell/submodule [module-dir submodule &named commit]
   (os/cd submodule)
+  (def submodule-dir (os/cwd))
   (git/async module-dir "pull")
   (os/execute [(os/getenv "SHELL")] :p)
+  (if commit
+    (if (> (length (git/changes submodule-dir)) 0)
+      (do (git/loud "add" "-A")
+          (git/loud "commit" "-m" "updated contents manually in shell"))))
   (if ((git/changes module-dir) submodule) # TODO BUG this does not only detect new commits but also working tree modifications
-      (do (git/async (path/join module-dir submodule) "push")
+      (do (git/async submodule-dir "push")
           (git/loud module-dir "add" submodule)
           (git/loud module-dir "commit" "-m" (string "updated " submodule))
           (git/async module-dir "push"))))
 
-(defn shell [module-dir args]
+(defn shell [module-dir args &named commit-in-submodules]
   (def submodules (array/concat (git/ls-submodules module-dir) ["."]))
   (def selected
     (if (> (length args) 0)
@@ -29,7 +34,7 @@
         (jeff/choose "select shell path> " submodules)))
   (if (= selected ".")
       (shell/root module-dir)
-      (shell/submodule module-dir selected)))
+      (shell/submodule module-dir selected :commit commit-in-submodules)))
 
 # TODO implement these helpers
 (defn generic/sync [&opt target])
