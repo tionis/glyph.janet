@@ -15,6 +15,7 @@
   (os/cd submodule)
   (def submodule-dir (os/cwd))
   (git/async module-dir "pull")
+  # TODO auto pull submodule if a branch is checked out, do nothing when head is detached?
   (os/execute [(os/getenv "SHELL")] :p)
   (if commit
     (if (> (length (git/changes submodule-dir)) 0)
