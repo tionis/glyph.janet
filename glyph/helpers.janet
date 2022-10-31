@@ -19,8 +19,8 @@
   (os/execute [(os/getenv "SHELL")] :p)
   (if commit
     (if (> (length (git/changes submodule-dir)) 0)
-      (do (git/loud "add" "-A")
-          (git/loud "commit" "-m" "updated contents manually in shell"))))
+      (do (git/loud submodule-dir "add" "-A")
+          (git/loud submodule-dir "commit" "-m" "updated contents manually in shell"))))
   (if ((git/changes module-dir) submodule) # TODO BUG this does not only detect new commits but also working tree modifications
       (do (git/async submodule-dir "push")
           (git/loud module-dir "add" submodule)
