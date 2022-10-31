@@ -23,6 +23,7 @@
        ([err] (error "Could not parse glyph config"))))
 
 (defn config/eval [arch-dir eval-func &opt commit-message]
+  # TODO remove this when the config system is migrated
   (def conf-path (path/join arch-dir ".glyph" "config.jdn"))
   (with [lock (flock/acquire conf-path :block :exclusive)]
     (def old-conf (config/load arch-dir))
@@ -197,7 +198,7 @@
   (var root-conf @{})
   # TODO add config package to manage the config
   # TODO read myself and check if it matches any module or alias, if it does use it as first arg and proceed as normal
-  # TODO add command to create symlinks for module or alias
+  # abolish use of root-config
   (def arch-dir (do (def env_arch_dir (os/getenv "GLYPH_ARCH_DIR"))
                     (def env_arch_stat (if env_arch_dir (os/stat env_arch_dir) nil))
                     (if (and env_arch_dir (= (env_arch_stat :mode) :directory))
@@ -220,8 +221,6 @@
                  ([err] (eprint "Could not load glyph config: " err)
                         (os/exit 1)))))
   # TODO never overwrite user config, not even in-memory
-  # TODO wiki should be implemented as a module
-  (put-in root-conf [:modules "wiki"] {:description "default wiki implementation" :path "wiki"}) # TODO add special handler here?
   (let [runtime-name (path/basename (first (dyn :args)))]
     (if ((merge (get root-conf :modules {}) (get root-conf :aliases {}))
          runtime-name)
@@ -230,15 +229,14 @@
   (def subcommand (get (dyn :args) 1 nil))
   (array/remove (dyn :args) 1)
   (case subcommand
-    # TODO add init command to write out default config
+    # TODO add setup command for first time users
     "modules" (cli/modules arch-dir root-conf)
     "scripts" (cli/scripts arch-dir root-conf)
     "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice (dyn :args) 1 -1)] :p))
+    "fsck" (cli/fsck arch-dir root-conf)
+    "sync" (sync {:arch-dir arch-dir})
     "help" (print-root-help arch-dir root-conf)
     "--help" (print-root-help arch-dir root-conf)
     "-h" (print-root-help arch-dir root-conf)
-    "" (print-root-help arch-dir root-conf)
-    "sync" (sync {:arch-dir arch-dir})
-    "fsck" (cli/fsck arch-dir root-conf) # TODO required?
     nil (print-root-help arch-dir root-conf)
     (cli/modules/execute arch-dir root-conf subcommand)))
