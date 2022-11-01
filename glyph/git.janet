@@ -1,4 +1,5 @@
 (use spork/sh)
+(import spork/path)
 
 (defn get-null-file "get the /dev/null equivalent for current platform" []
   (case (os/which)
@@ -64,3 +65,13 @@
                                   (slurp dir "submodule" "status" "--recursive")
                                   (slurp dir "submodule" "status"))))
   (map |(first (peg/match submodules-status-line-peg $0)) lines))
+
+(defn fsck [dir &named no-recurse]
+  (print "Executing fsck at root")
+  (loud dir "fsck")
+  (print)
+  (each submodule-path (ls-submodules dir :recursive (not no-recurse))
+    (def path (path/join dir submodule-path))
+    (print "Executing fsck at " submodule-path)
+    (loud path "fsck")
+    (print)))

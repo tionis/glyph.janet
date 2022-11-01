@@ -52,7 +52,6 @@
 
 # TODO implement these helpers
 (defn generic/sync [&opt target])
-(defn generic/fsck [])
 (defn generic/setup [])
 (defn generic/bundle [])
 (defn generic/glyph-info [supported-operations]
