@@ -1,5 +1,6 @@
 (import ./init :prefix "" :export true)
 (import ./options)
+(use spork)
 
 (defn cli/modules/add [args]
   (def res
