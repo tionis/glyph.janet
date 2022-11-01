@@ -16,8 +16,8 @@
 
 (defn fsck []
   (def arch-dir (dyn :arch-dir))
-  (print "Starting root fsck...")
-  (os/execute ["git" "-C" arch-dir "fsck"] :p)
+  (print "Starting normal recursive git fsck...")
+  (git/fsck arch-dir)
   (print)
   (each name (modules/ls)
     (def module (modules/get name))
@@ -25,5 +25,5 @@
     (if (os/stat info-path)
         (do (def info (json/decode (slurp info-path)))
             (if (index-of "fsck" (info "supported"))
-                (do (print "Starting " name " fsck...")
+                (do (print "Starting additional fsck for  " name)
                     (modules/execute name ["fsck"])))))))
