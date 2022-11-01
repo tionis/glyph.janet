@@ -2,7 +2,7 @@
 (import spork/misc)
 
 (defn modules/add [name path description]
-  (config/set (string "module/" name)
+  (config/set (string "modules/" name)
               {:path path :description description}
               :commit-message (string "config: added \"" name "\" module")))
 

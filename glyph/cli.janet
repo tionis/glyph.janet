@@ -53,7 +53,7 @@
   (if module
     (do (def prev-dir (os/cwd))
         (defer (os/cd prev-dir)
-          (os/cd (module :path))
+          (os/cd (path/join (dyn :arch-dir) (module :path)))
           (if (os/stat ".main")
             (os/execute [".main" ;args])
             (do (eprint "module has no .main or is not initialized, aborting...") (os/exit 1)))
