@@ -27,3 +27,10 @@
       p))
 
 (defn get-default-arch-dir [] (path/join (home) "arch"))
+
+(defn get-arch-dir []
+  (def env_arch_dir (os/getenv "GLYPH_ARCH_DIR"))
+  (def env_arch_stat (if env_arch_dir (os/stat env_arch_dir) nil))
+  (if (and env_arch_dir (= (env_arch_stat :mode) :directory))
+      env_arch_dir
+      (get-default-arch-dir)))

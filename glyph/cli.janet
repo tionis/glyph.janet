@@ -1,4 +1,4 @@
-(use ./init)
+(import ./init :prefix "" :export true)
 (import ./options)
 
 (defn cli/modules/add [args]
@@ -119,11 +119,7 @@
   (print (string/join (array/concat @[preinstalled] modules scripts) "\n")))
 
 (defn main [myself & args]
-  (def arch-dir (do (def env_arch_dir (os/getenv "GLYPH_ARCH_DIR"))
-                    (def env_arch_stat (if env_arch_dir (os/stat env_arch_dir) nil))
-                    (if (and env_arch_dir (= (env_arch_stat :mode) :directory))
-                        env_arch_dir
-                        (util/get-default-arch-dir))))
+  (def arch-dir (util/get-arch-dir))
   (setdyn :arch-dir arch-dir)
   (case (first args)
     "setup" (cli/setup (slice args 1 -1))
