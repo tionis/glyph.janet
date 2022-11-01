@@ -1,5 +1,8 @@
 (use ./config)
+(import ./git)
 (import spork/misc)
+(import spork/path)
+(import ./scripts)
 
 (defn modules/add [name path description]
   (config/set (string "modules/" name)
@@ -17,3 +20,24 @@
               :commit-message (string "config: removed \"" name "\" module")))
 
 (defn modules/get [name] (config/get (string "modules/" name)))
+
+(defn modules/execute [name args]
+  (git/async (dyn :arch-dir) "pull")
+  (def module (modules/get name))
+  (def arch-dir (dyn :arch-dir))
+  (if module
+    (do (def prev-dir (os/cwd))
+        (defer (os/cd prev-dir)
+          (os/cd (path/join (dyn :arch-dir) (module :path)))
+          (if (os/stat ".main")
+            (os/execute [".main" ;args])
+            (do (eprint "module has no .main or is not initialized, aborting...") (os/exit 1)))
+            # TODO this triggers for modified content and new commits -> only trigger on new commits
+            (if ((git/changes arch-dir) (module :path))
+                (do (git/loud arch-dir "add" (module :path))
+                    (git/loud arch-dir "commit" "-m" (string "updated " name))
+                    (git/async arch-dir "push")))))
+    (if (index-of name (scripts/ls))
+      (do (os/cd (dyn :arch-dir)) (os/execute [(path/join ".scripts" name) ;args]))
+      (do (eprint (string "neither a module nor a user script called " name " exists, use help to list existing ones"))
+          (os/exit 1)))))

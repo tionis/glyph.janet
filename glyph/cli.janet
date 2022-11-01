@@ -46,27 +46,6 @@
            deinit - deinitialize and existing module
            help - show this help`))
 
-(defn cli/modules/execute [name args]
-  (git/async (dyn :arch-dir) "pull")
-  (def module (modules/get name))
-  (def arch-dir (dyn :arch-dir))
-  (if module
-    (do (def prev-dir (os/cwd))
-        (defer (os/cd prev-dir)
-          (os/cd (path/join (dyn :arch-dir) (module :path)))
-          (if (os/stat ".main")
-            (os/execute [".main" ;args])
-            (do (eprint "module has no .main or is not initialized, aborting...") (os/exit 1)))
-            # TODO this triggers for modified content and new commits -> only trigger on new commits
-            (if ((git/changes arch-dir) (module :path))
-                (do (git/loud arch-dir "add" (module :path))
-                    (git/loud arch-dir "commit" "-m" (string "updated " name))
-                    (git/async arch-dir "push")))))
-    (if (index-of name (scripts/ls))
-      (do (os/cd (dyn :arch-dir)) (os/execute [(path/join ".scripts" name) ;args]))
-      (do (eprint (string "neither a module nor a user script called " name " exists, use help to list existing ones"))
-          (os/exit 1)))))
-
 (defn cli/modules/init [name]
   (if (not name) (do (print "Specify module to initialize by name, aborting...") (os/exit 1)))
   (def module-conf (modules/get name))
@@ -98,7 +77,7 @@
     "rm" (cli/modules/rm (get args 1 nil))
     "help" (cli/modules/help)
     nil (cli/modules/ls)
-    (cli/modules/execute (first args) (slice args 1 -1))))
+    (modules/execute (first args) (slice args 1 -1))))
 
 (defn cli/scripts [args] (print "To add user scripts just add them in the .scripts directory"))
 
@@ -132,4 +111,4 @@
     "--help" (print-root-help)
     "-h" (print-root-help)
     nil (print-root-help)
-    (cli/modules/execute (first args) (slice args 1 -1))))
+    (modules/execute (first args) (slice args 1 -1))))

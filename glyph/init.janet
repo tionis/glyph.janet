@@ -7,11 +7,23 @@
 (import ./scripts :export true)
 
 (defn sync
-  "synchronize arch specified by config synchroniously"
+  "synchronize glyph archive"
   []
-  # TODO sync all modules
   (os/execute ["git" "-C" (dyn :arch-dir) "pull"] :p)
+  (os/execute ["git" "-C" (dyn :arch-dir) "submodule" "update" "--recursive"] :p)
+  (scripts/sync/exec)
   (os/execute ["git" "-C" (dyn :arch-dir) "push"] :p))
 
 (defn fsck []
-  (os/execute ["git" "-C" (dyn :arch-dir) "fsck"] :p))
+  (def arch-dir (dyn :arch-dir))
+  (print "Starting root fsck...")
+  (os/execute ["git" "-C" arch-dir "fsck"] :p)
+  (print)
+  (each name (modules/ls)
+    (def module (modules/get name))
+    (def info-path (path/join arch-dir (module :path) ".main.info.json"))
+    (if (os/stat info-path)
+        (do (def info (json/decode (slurp info-path)))
+            (if (index-of "fsck" (info "supported"))
+                (do (print "Starting " name " fsck...")
+                    (modules/execute name ["fsck"])))))))
