@@ -1,5 +1,6 @@
 #!/bin/env janet
-(import spork :prefix "" :export true)
+(import spork :prefix "")
+(import ./glob :export true)
 (import ./util :export true)
 (import ./git :export true)
 (import ./config :prefix "" :export true)

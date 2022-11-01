@@ -1,6 +1,0 @@
-(defn get [&named name id path])
-(defn put [name])
-(defn ls [])
-(defn ls-contents [&named name id])
-(defn versions [name])
-(defn restore [&named name dir id])
