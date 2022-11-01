@@ -3,7 +3,7 @@
 (import ./util :export true)
 (import ./git :export true)
 (import ./config :prefix "" :export true)
-(import ./modules :export true)
+(import ./modules :prefix "" :export true)
 (import ./scripts :export true)
 
 (defn sync

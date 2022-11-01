@@ -23,20 +23,14 @@
   (print `module was added to index. You can now add a .main script and manage it via git.
          For examples for .main script check the glyph main repo at https://tasadar.net/tionis/glyph`))
 
-(defn cli/modules/ls []
-  (def pattern (first (dyn :args)))
-  (def modules (modules/ls pattern))
-  (print
-    (string/join
-      (map
-        (fn [name]
-          (def module (config/get (string "module/" name)))
-          (string name " - " (module :description))) modules)
-      "\n")))
+(defn cli/modules/ls [&opt args]
+  (print (string/join (map |(string $0 " - " ((modules/get $0) :description))
+                           (modules/ls (first args)))
+                      "\n")))
 
 (defn cli/modules/rm [name]
   (if (not name) (do (print "Specify module to remove!") (os/exit 1)))
-  (def module (config/get (string "modules/" name)))
+  (def module (modules/get name))
   (if (not module) (do (print "Module " name " not found, aborting...") (os/exit 1)))
   (git/loud (dyn :arch-dir) "submodule" "deinit" "-f" (module :path))
   (sh/rm (path/join (dyn :arch-dir) ".git" "modules" (module :path)))
@@ -54,7 +48,7 @@
 
 (defn cli/modules/execute [name args]
   (git/async (dyn :arch-dir) "pull")
-  (def module (config/get (string "modules/" name)))
+  (def module (modules/get name))
   (def arch-dir (dyn :arch-dir))
   (if module
     (do (def prev-dir (os/cwd))
@@ -75,14 +69,14 @@
 
 (defn cli/modules/init [name]
   (if (not name) (do (print "Specify module to initialize by name, aborting...") (os/exit 1)))
-  (def module-conf (config/get (string"modules/" name)))
+  (def module-conf (modules/get name))
   (if (not module-conf) (do (print "Module " name " not found, aborting...") (os/exit 1)))
   (git/loud (dyn :arch-dir) "submodule" "update" "--init" (module-conf :path)))
 
 (defn cli/modules/deinit [name]
   (def arch-dir (dyn :arch-dir))
   (if (not name) (do (print "Specify module to initialize by name, aborting...") (os/exit 1)))
-  (def module-conf (config/get (string"modules/" name)))
+  (def module-conf (modules/get name))
   (if (not module-conf) (do (print "Module " name " not found, aborting...") (os/exit 1)))
   (git/loud arch-dir "submodule" "deinit" "-f" (module-conf :path))
   (sh/rm (path/join arch-dir ".git" "modules" (module-conf :path))))
@@ -100,7 +94,7 @@
     "add" (cli/modules/add (slice args 1 -1))
     "init" (cli/modules/init (first args))
     "deinit" (cli/modules/deinit (first args))
-    "ls" (cli/modules/ls)
+    "ls" (cli/modules/ls (first args))
     "rm" (cli/modules/rm (first args))
     "help" (cli/modules/help)
     nil (cli/modules/ls)
@@ -114,13 +108,13 @@
 
 (defn print-root-help []
   (def preinstalled `Available Subcommands:
-                      modules - manage your custom modules, use 'glyph module --help' for more information
+                      modules - manage your custom modules, use 'glyph modules help' for more information
                       scripts - manage your user scripts
                       git - execute git command on the arch repo
                       sync - sync the glyph archive
                       fsck - perform a filesystem check of arch repo
                       help - print this help`)
-  (def modules (map |(string "  " $0 " - " (config/get (string "modules/" $0))) (modules/ls)))
+  (def modules (map |(string "  " $0 " - " ((modules/get $0) :description)) (modules/ls)))
   (def scripts (map |(string "  " $0 " - user script") (scripts/ls)))
   (print (string/join (array/concat @[preinstalled] modules scripts) "\n")))
 
@@ -135,7 +129,7 @@
     "setup" (cli/setup (slice args 1 -1))
     "modules" (cli/modules (slice args 1 -1))
     "scripts" (cli/scripts (slice args 1 -1))
-    "git" (os/exit (os/execute ["git" "-C" arch-dir ;args] :p))
+    "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice args 1 -1)] :p))
     "fsck" (cli/fsck (slice args 1 -1))
     "sync" (cli/sync (slice args 1 -1))
     "help" (print-root-help)

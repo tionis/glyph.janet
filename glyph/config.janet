@@ -37,7 +37,7 @@
       (git/loud arch-dir "commit" "-m" commit-message))))
 
 (defn config/ls [glob-pattern]
-  (def config-path (path/join (get-config-dir)))
+  (def config-path (get-config-dir))
   (create_dirs_if_not_exists config-path)
   (def ret @[])
   (def prev (os/cwd))
@@ -45,9 +45,8 @@
   (if (= glob-pattern nil)
     (sh/scan-directory "." |(array/push ret $0))
     (let [pattern (glob/glob-to-peg glob-pattern)]
-        (sh/scan-directory "."
-                                   |(if (peg/match pattern $0)
-                                        (array/push ret $0)))))
+         (sh/scan-directory "." |(if (peg/match pattern $0)
+                                     (array/push ret $0)))))
   (os/cd prev)
   ret)
 
