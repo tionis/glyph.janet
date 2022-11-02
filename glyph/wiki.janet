@@ -67,9 +67,9 @@
         (do (prin "Commit Message: ")
             (def message (string/trim (file/read stdin :line)))
             (if (= message "")
-                (git/slurp (config :wiki-dir) "commit" "-m" default_message)
-                (git/slurp (config :wiki-dir) "commit" "-m" message)))
-        (git/slurp (config :wiki-dir) "commit" "-m" default_message))))
+                (git/loud (config :wiki-dir) "commit" "-m" default_message)
+                (git/loud (config :wiki-dir) "commit" "-m" message)))
+        (git/loud (config :wiki-dir) "commit" "-m" default_message))))
 
 (def ls-files-peg
   "Peg to handle files from git ls-files"
@@ -116,7 +116,7 @@
 (defn rm
   "delete doc specified by path"
   [config file] # TODO check via graph what links are broken by that and warn user, ask them if they still want to continue (do not ask if (get-in config [:argparse "force"]) is true)
-  (git/slurp (config :wiki-dir) "rm" (string file ".md"))
+  (git/loud (config :wiki-dir) "rm" (string file ".md"))
   (commit config (string "deleted " file))
   (if (config :sync) (git/async (config :wiki-dir) "push")))
 
@@ -146,8 +146,8 @@
         # TODO smarter commit
         (cond
           (= change-count 0) (do (print "No changes, not commiting..."))
-          (= change-count 1) (do (git/slurp (config :wiki-dir) "add" "-A") (commit config (string "updated " file)))
-          (> change-count 1) (do (git/slurp (config :wiki-dir) "add" "-A") (commit config (string "session from " file))))
+          (= change-count 1) (do (git/loud (config :wiki-dir) "add" "-A") (commit config (string "updated " file)))
+          (> change-count 1) (do (git/loud (config :wiki-dir) "add" "-A") (commit config (string "session from " file))))
         (if (> change-count 0) (if (config :sync)(git/async (config :wiki-dir) "push"))))))
 
 (defn trim-prefix [prefix str]
@@ -201,9 +201,9 @@
         (flush)
         (fs/create-directories target_parent_dir)
         (print "Done.")))
-  (git/slurp (config :wiki-dir) "mv" source_path target_path)
-  (git/slurp (config :wiki-dir) "add" source_path)
-  (git/slurp (config :wiki-dir) "add" target_path)
+  (git/loud (config :wiki-dir) "mv" source_path target_path)
+  (git/loud (config :wiki-dir) "add" source_path)
+  (git/loud (config :wiki-dir) "add" target_path)
   (commit config (string "moved " source " to " target))
   (if (config :sync) (git/async (config :wiki-dir) "push")))
 
