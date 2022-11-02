@@ -142,13 +142,13 @@
       (print (slurp file_path))
       (do
         (os/execute [(config :editor) file_path] :p)
-        (def change_count (length (filter |(peg/match ~{:main (sequence "wiki/" (any 1) -1)} (string/trim $0)) (keys (git/changes (config :wiki-dir)))))) # TODO wiki path is hardcoded here, this should be migrated later (will not be necessary once wiki is an ordinary module)
+        (def change-count (length (git/changes (config :wiki-dir))))
         # TODO smarter commit
         (cond
-          (= change_count 0) (do (print "No changes, not commiting..."))
-          (= change_count 1) (do (git/slurp (config :wiki-dir) "add" "-A") (commit config (string "updated " file)))
-          (> change_count 1) (do (git/slurp (config :wiki-dir) "add" "-A") (commit config (string "session from " file))))
-        (if (> change_count 0) (if (config :sync)(git/async (config :wiki-dir) "push"))))))
+          (= change-count 0) (do (print "No changes, not commiting..."))
+          (= change-count 1) (do (git/slurp (config :wiki-dir) "add" "-A") (commit config (string "updated " file)))
+          (> change-count 1) (do (git/slurp (config :wiki-dir) "add" "-A") (commit config (string "session from " file))))
+        (if (> change-count 0) (if (config :sync)(git/async (config :wiki-dir) "push"))))))
 
 (defn trim-prefix [prefix str]
   (if (string/has-prefix? prefix str)
