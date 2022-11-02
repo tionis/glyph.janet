@@ -117,7 +117,7 @@
   "delete doc specified by path"
   [config file] # TODO check via graph what links are broken by that and warn user, ask them if they still want to continue (do not ask if (get-in config [:argparse "force"]) is true)
   (git/slurp (config :wiki-dir) "rm" (string file ".md"))
-  (commit config (string "wiki: deleted " file))
+  (commit config (string "deleted " file))
   (if (config :sync) (git/async (config :wiki-dir) "push")))
 
 (defn rm/interactive
@@ -146,8 +146,8 @@
         # TODO smarter commit
         (cond
           (= change_count 0) (do (print "No changes, not commiting..."))
-          (= change_count 1) (do (git/slurp (config :wiki-dir) "add" "-A") (commit config (string "wiki: updated " file)))
-          (> change_count 1) (do (git/slurp (config :wiki-dir) "add" "-A") (commit config (string "wiki: session from " file))))
+          (= change_count 1) (do (git/slurp (config :wiki-dir) "add" "-A") (commit config (string "updated " file)))
+          (> change_count 1) (do (git/slurp (config :wiki-dir) "add" "-A") (commit config (string "session from " file))))
         (if (> change_count 0) (if (config :sync)(git/async (config :wiki-dir) "push"))))))
 
 (defn trim-prefix [prefix str]
@@ -204,7 +204,7 @@
   (git/slurp (config :wiki-dir) "mv" source_path target_path)
   (git/slurp (config :wiki-dir) "add" source_path)
   (git/slurp (config :wiki-dir) "add" target_path)
-  (commit config (string "wiki: moved " source " to " target))
+  (commit config (string "moved " source " to " target))
   (if (config :sync) (git/async (config :wiki-dir) "push")))
 
 (def patt_md_without_header "PEG-Pattern that captures the content of a markdown file without the metadata header"
