@@ -10,7 +10,7 @@
 (defn sync
   "synchronize glyph archive"
   []
-  (os/execute ["git" "-C" (dyn :arch-dir) "pull"] :p)
+  (os/execute ["git" "-C" (dyn :arch-dir) "pull" "--recurse-submodules=no"] :p)
   (os/execute ["git" "-C" (dyn :arch-dir) "submodule" "update" "--recursive"] :p)
   (scripts/sync/exec)
   (os/execute ["git" "-C" (dyn :arch-dir) "push"] :p))
