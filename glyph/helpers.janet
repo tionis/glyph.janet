@@ -12,8 +12,8 @@
     (os/execute [(os/getenv "SHELL")] :p))
   (if (not= (length (git/changes module-dir)) 0)
       (do (git/loud module-dir "add" "-A")
-          (git/loud module-dir "commit" "-m" "updated contents manually in shell")
-          (git/async module-dir "push"))))
+          (git/loud module-dir "commit" "-m" "updated contents manually in shell")))
+  (git/async module-dir "push"))
 
 (defn shell/submodule [module-dir submodule &named commit command]
   (os/cd submodule)
