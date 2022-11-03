@@ -88,6 +88,14 @@
     (pp (:wait proc)))
   {:out (string/trimr out-buf) :err (string/trimr err-buf) :code 0})
 
+(defn remote/url/get-owner-repo-string
+  [url]
+  (first
+    (peg/match
+      ~(+ (* "git@" (thru ":") (capture (any (* (not ".git") 1))) (opt ".git") -1)
+          (* "http" (opt "s") "://" (some (* (not "/") 1)) "/" (capture (some (* (not ".git") 1))) (opt ".git") -1))
+      url)))
+
 (defn default-branch
   "get the default branch of remote"
   [dir &named remote]
