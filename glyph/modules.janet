@@ -21,6 +21,8 @@
 
 (defn modules/get [name] (config/get (string "modules/" name)))
 
+(defn modules/init [name] (git/loud (dyn :arch-dir) "submodule" "update" "--init" (module-conf :path)))
+
 (defn modules/execute [name args]
   (git/async (dyn :arch-dir) "pull")
   (def module (modules/get name))

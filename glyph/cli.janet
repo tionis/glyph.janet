@@ -51,7 +51,7 @@
   (if (not name) (do (print "Specify module to initialize by name, aborting...") (os/exit 1)))
   (def module-conf (modules/get name))
   (if (not module-conf) (do (print "Module " name " not found, aborting...") (os/exit 1)))
-  (git/loud (dyn :arch-dir) "submodule" "update" "--init" (module-conf :path)))
+  (modules/init name))
 
 (defn cli/modules/deinit [name]
   (def arch-dir (dyn :arch-dir))
