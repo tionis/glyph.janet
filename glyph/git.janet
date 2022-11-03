@@ -75,3 +75,25 @@
     (print "Executing fsck at " submodule-path)
     (loud path "fsck")
     (print)))
+
+(defn slurp-all [dir & args]
+  (def proc (os/spawn ["git" "-C" "dir" ;args] :px {:out :pipe :err :pipe}))
+  (def out (get proc :out))
+  (def err (get proc :out))
+  (def out-buf @"")
+  (def err-buf @"")
+  (ev/gather
+    (:read out :all out-buf)
+    (:read err :all err-buf) # TODO this doesn't work
+    (pp (:wait proc)))
+  {:out (string/trimr out-buf) :err (string/trimr err-buf) :code 0})
+
+(defn default-branch
+  "get the default branch of remote"
+  [dir &named remote]
+  (default remote "origin")
+  (let [remote-head-result (slurp-all dir "rev-parse" "--abbrev-ref" (string remote "/HEAD"))]
+    (if (= (remote-head-result :code) 0)
+      (remote-head-result :out)
+      "main" # TODO this is a hack an won't work for other people
+      )))
