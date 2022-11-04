@@ -6,6 +6,7 @@
 (import ./config :prefix "" :export true)
 (import ./modules :prefix "" :export true)
 (import ./scripts :export true)
+(import ./jobs :export true)
 
 (defn sync
   "synchronize glyph archive"
@@ -13,6 +14,7 @@
   (os/execute ["git" "-C" (dyn :arch-dir) "pull" "--recurse-submodules=no"] :p)
   (os/execute ["git" "-C" (dyn :arch-dir) "submodule" "update" "--merge" "--recursive"] :p)
   (scripts/sync/exec)
+  (jobs/exec)
   (os/execute ["git" "-C" (dyn :arch-dir) "push"] :p))
 
 (defn fsck []

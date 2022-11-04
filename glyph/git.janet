@@ -1,5 +1,6 @@
 (use spork/sh)
 (import spork/path)
+(import jobs)
 
 (defn get-null-file "get the /dev/null equivalent for current platform" []
   (case (os/which)
@@ -53,7 +54,7 @@
   (def null_file (get-null-file))
   (def fout (os/open null_file :w))
   (def ferr (os/open null_file :w))
-  (os/spawn ["git" "-C" dir ;args] :pd {:out fout :err ferr}))
+  (jobs/add ["git" "-C" dir ;args]))
 
 (def- submodules-status-line-peg "pattern to parse a line from git submodules status for it's submodule path"
   (peg/compile ~(* (+ " " "+" "-") (40 :w) " " (<- (to (+ " " -1))) (? (* " " (to -1))))))
