@@ -1,13 +1,14 @@
 (use spork)
 (import ./git)
 (import ./glob)
+(import ./util)
 
 (defn- create_dirs_if_not_exists [dir]
   (let [meta (os/stat dir)]
     (if (not (and meta (= (meta :mode) :directory)))
       (sh/create-dirs dir))))
 
-(defn- get-config-dir [] (path/join (dyn :arch-dir) ".glyph"))
+(defn- get-config-dir [] (path/join (util/arch-dir) ".glyph"))
 
 (defn config/get [key]
   (def path (path/join (get-config-dir) (path/join ;(path/posix/parts key))))
@@ -19,7 +20,7 @@
 (defn config/set [key value &named commit-message]
   (def formatted-key (path/join ;(path/posix/parts key)))
   (def path (path/join (get-config-dir) formatted-key))
-  (def arch-dir (dyn :arch-dir))
+  (def arch-dir (util/arch-dir))
   (if (not value)
     (do
       (def path (path/join (get-config-dir) key))

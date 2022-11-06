@@ -11,14 +11,13 @@
 (defn sync
   "synchronize glyph archive"
   []
-  (os/execute ["git" "-C" (dyn :arch-dir) "pull" "--recurse-submodules=no"] :p)
-  (os/execute ["git" "-C" (dyn :arch-dir) "submodule" "update" "--merge" "--recursive"] :p)
+  (git/pull (util/arch-dir))
   (scripts/sync/exec)
-  (jobs/exec)
-  (os/execute ["git" "-C" (dyn :arch-dir) "push"] :p))
+  #(jobs/exec) # TODO ensure daemon is running?
+  (git/push (util/arch-dir)))
 
 (defn fsck []
-  (def arch-dir (dyn :arch-dir))
+  (def arch-dir (util/arch-dir))
   (print "Starting normal recursive git fsck...")
   (git/fsck arch-dir)
   (print)

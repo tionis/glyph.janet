@@ -34,3 +34,7 @@
   (if (and env_arch_dir (= (env_arch_stat :mode) :directory))
       env_arch_dir
       (get-default-arch-dir)))
+
+(defn arch-dir []
+  (if (not (dyn :arch-dir)) (setdyn :arch-dir (get-arch-dir)))
+  (dyn :arch-dir))

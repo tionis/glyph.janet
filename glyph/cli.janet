@@ -1,5 +1,5 @@
 (import ./init :prefix "" :export true)
-(import ./options)
+(import ./options :export true)
 (use spork)
 
 (defn cli/modules/add [args]
@@ -22,7 +22,9 @@
   (unless res (os/exit 1))
   (modules/add (res "name") (res "path") (res "description"))
   (print `module was added to index. You can now add a .main script and manage it via git.
-         For examples for .main script check the glyph main repo at https://tasadar.net/tionis/glyph`))
+         For examples for .main script check the glyph main repo at https://tasadar.net/tionis/glyph
+         If this glyph module uses a git submodule ensure that the git module update and branch are set 
+         these .gitmodule options ensure the gitmodules are handled correctly by all glyph functions`))
 
 (defn cli/modules/ls [&opt args]
   (print (string/join (map |(string $0 " - " ((modules/get $0) :description))
@@ -33,8 +35,8 @@
   (if (not name) (do (print "Specify module to remove!") (os/exit 1)))
   (def module (modules/get name))
   (if (not module) (do (print "Module " name " not found, aborting...") (os/exit 1)))
-  (git/loud (dyn :arch-dir) "submodule" "deinit" "-f" (module :path))
-  (sh/rm (path/join (dyn :arch-dir) ".git" "modules" (module :path)))
+  (git/loud (util/arch-dir) "submodule" "deinit" "-f" (module :path))
+  (sh/rm (path/join (util/arch-dir) ".git" "modules" (module :path)))
   (modules/rm name)
   (print "module " name " was deleted"))
 
@@ -54,7 +56,7 @@
   (modules/init name))
 
 (defn cli/modules/deinit [name]
-  (def arch-dir (dyn :arch-dir))
+  (def arch-dir (util/arch-dir))
   (if (not name) (do (print "Specify module to initialize by name, aborting...") (os/exit 1)))
   (def module-conf (modules/get name))
   (if (not module-conf) (do (print "Module " name " not found, aborting...") (os/exit 1)))

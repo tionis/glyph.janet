@@ -1,5 +1,6 @@
 (import spork/tasker)
 (import spork/path)
+(import ./util)
 
 (def min-priority "Minimum allowed priority (lower priority tasks will execute first)" 0)
 (def max-priority "Maximum allowed priority (lower priority tasks will execute first)" 9)
