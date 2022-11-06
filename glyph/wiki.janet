@@ -1,5 +1,4 @@
 (import ./markdown :as "md" :export true)
-(import ./filesystem :as "fs")
 (import ./graph :export true)
 (import chronos :as "date")
 (import ./git)
@@ -91,9 +90,9 @@
   (if (= ((os/stat p) :mode) :file)
       p
       (map |((peg/match ~(* ,p (? (+ "/" "\\")) (capture (any 1))) $0) 0)
-            (filter |(is-doc $0) # TODO migrate away from filesystem.janet
-                    (fs/list-all-files p))))) # TODO migration to the inclusion of file endings and using the get-doc-path function to get a full valid wiki path from an ambigous pathless link
-  #(peg/match ls-files-peg (string (git/slurp config "ls-files")) "\n")) # TODO implement this probably fast ways
+            (filter |(is-doc $0) # TODO migrate away from this simple solution
+                    (sh/list-all-files p))))) # TODO migration to the inclusion of file endings and using the get-doc-path function to get a full valid wiki path from an ambigous pathless link
+  #(peg/match ls-files-peg (string (git/ ["ls-files"])) "\n")) # TODO implement this as it is probably faster
   # - maybe use git ls-files as it is faster?
   # - warning: ls-files does not print special chars but puts the paths between " and escapes the special chars -> problem with newlines?
   # - problem: this is a bit more complex and I would have to fix my PEG above to correctly parse the output again
@@ -165,7 +164,7 @@
   [config query]
   (def found_files (map |(trim-prefix (string (path/basename (config :wiki-dir)) "/") $0)
                      (filter |(is-doc $0)
-                           (string/split "\n" (git/slurp (config :wiki-dir) "grep" "-i" "-l" query ":(exclude).obsidian/*" "./*")))))
+                           (string/split "\n" (git/exec-slurp (config :wiki-dir) "grep" "-i" "-l" query ":(exclude).obsidian/*" "./*")))))
   (def selected_file (file/select config :files-override found_files))
   (if selected_file
       (edit config selected_file)

@@ -9,15 +9,15 @@
 (def default-task-directory "Default location of task records" "./tasks")
 
 (defn- create-tasker []
-  (def tasker-dir (path/join (dyn :arch-dir) ".git" "tasker"))
+  (def tasker-dir (path/join (util/arch-dir) ".git" "tasker"))
   (if (not (os/stat tasker-dir)) (os/mkdir tasker-dir))
-  (setdyn :tasker (tasker/new-tasker (get-tasker-dir))))
+  (setdyn :tasker (tasker/new-tasker tasker-dir)))
 
 (defn- ensure-tasker []
   (if (not (dyn :tasker))
       (create-tasker)))
 
-(defn jobs/add [args &named note priority qname timeout expiration input]
+(defn add [args &named note priority qname timeout expiration input]
   (ensure-tasker)
   (default note "")
   (default priority default-priority)
@@ -26,6 +26,6 @@
   (default expiration default-expiration)
   (tasker/queue-task (dyn :tasker) args note priority qname timeout expiration input))
 
-(defn jobs/exec []
+(defn exec []
   (ensure-tasker)
   (tasker/run-executors (dyn :tasker)))
