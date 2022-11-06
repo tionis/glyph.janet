@@ -7,13 +7,14 @@
 (import ./modules :prefix "" :export true)
 (import ./scripts :export true)
 (import ./jobs :export true)
+(import ./daemon :export true)
 
 (defn sync
   "synchronize glyph archive"
   []
   (git/pull (util/arch-dir))
   (scripts/sync/exec)
-  #(jobs/exec) # TODO ensure daemon is running?
+  (daemon/ensure)
   (git/push (util/arch-dir)))
 
 (defn fsck []

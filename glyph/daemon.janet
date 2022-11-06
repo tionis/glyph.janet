@@ -11,16 +11,16 @@
   # TODO start rpc server
   )
 
-(defn check 
+(defn check
   "check wether a functional daemin is running and return true if it does"
   []
   (rpc/client))
 
-(defn ensure 
+(defn ensure
   `ensure that a functioning daemon is running in the background
   checks wether a daemon is running and starts a new one if not`
   []
-  (if (not (check)) (os/execute :t))
+  (if (not (check)) (os/execute :t)))
 
 (defn cleanup [])
 
@@ -28,3 +28,23 @@
   (try
     (do (cleanup) (os/exit 0))
     ([err] (pp {:error err}) (os/exit 1))))
+
+(defn sync/enable
+  "enabled the daemon sync"
+  []
+  # TODO set config option
+  # TODO send command to daemon if running
+  )
+
+(defn sync/disable
+  "disables the daemon sync"
+  []
+  # TODO set config option
+  # TODO send command to daemon if running
+  )
+
+(defn sync/status
+  "returns the status of the daemon sync option as boolean"
+  []
+  # TODO query the sync option
+  )

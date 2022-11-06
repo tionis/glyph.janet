@@ -82,6 +82,33 @@
     nil (cli/modules/ls)
     (modules/execute (first args) (slice args 1 -1))))
 
+(defn cli/daemon/sync [args]
+  (case (first args)
+    "enable" (daemon/sync/enable)
+    "disable" (daemon/sync/disable)
+    "status" (if (daemon/sync/status) (print "daemon sync enabled") (print "daemon sync disabled"))
+    (print `Unknown command, available commands are:
+             enable - enable the daemon sync
+             disable - disable the daemon sync
+             status - show the status of daemon-based sync setting`)))
+
+(defn cli/daemon/status [args]
+  (if (daemon/check)
+    (do (print "daemon is running") (os/exit 0))
+    (do (print "daemon not running") (os/exit 1))))
+
+(defn cli/daemon [args]
+  (case (first args)
+    "sync" (cli/daemon/sync (slice args 1 -1))
+    "status" (cli/daemon/status (slice args 1 -1))
+    "ensure" (daemon/ensure)
+    "launch" (daemon/launch)
+    (print `Unknown command, available commands are:
+             sync - configure the daemon-based sync
+             launch - launch the daemon
+             ensure - ensure the daemon is running
+             status - query the status of the daemon`)))
+
 (defn cli/scripts [args] (print "To add user scripts just add them in the .scripts directory"))
 
 (defn cli/fsck [args] (fsck))
@@ -107,6 +134,7 @@
     "setup" (cli/setup (slice args 1 -1))
     "modules" (cli/modules (slice args 1 -1))
     "scripts" (cli/scripts (slice args 1 -1))
+    "daemon" (cli/daemon (slice args 1 -1))
     "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice args 1 -1)] :p))
     "fsck" (cli/fsck (slice args 1 -1))
     "sync" (cli/sync (slice args 1 -1))
