@@ -41,7 +41,7 @@
                                          :help "execute command in shell (passed to shell via the -c flag)"}
                               :default {:kind :accumulate}))
   (unless res (os/exit 1))
-  (def submodules (array/concat (git/ls-submodules module-dir) ["."]))
+  (def submodules (array/concat (git/ls-submodule-paths module-dir) ["."]))
   (def selected
     (if (res :default)
         (first (res :default))

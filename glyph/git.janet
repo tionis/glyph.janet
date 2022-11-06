@@ -48,6 +48,17 @@
     (put ret (change 1) (change 0)))
   ret)
 
+(def- submodules-status-line-peg "pattern to parse a line from git submodules status for it's submodule path"
+  (peg/compile ~(* (+ " " "+" "-") (40 :w) " " (<- (to (+ " " -1))) (? (* " " (to -1))))))
+
+(defn ls-submodule-paths
+  "lists submodule paths in the repo at dir, if recursive is true this is done recursivly"
+  [dir &named recursive]
+  (def lines (string/split "\n" (if recursive
+                                  (exec-slurp dir "submodule" "status" "--recursive")
+                                  (exec-slurp dir "submodule" "status"))))
+  (map |(first (peg/match submodules-status-line-peg $0)) lines))
+
 (defn async
   "given a git dir and some arguments execute the git subcommand on the given repo asynchroniously"
   [dir & args]
@@ -80,7 +91,7 @@
   "git push the specified repo with modifiers"
   [dir &named async silent ensure-pushed]
   (if ensure-pushed
-    (each submodule-path (ls-submodules dir)
+    (each submodule-path (ls-submodule-paths dir)
       (if (> (length (get-unpushed-changes submodule-path)) 0)
           (push submodule-path :async async :silent silent))))
   (if async
@@ -89,30 +100,11 @@
           (exec-slurp dir "push")
           (loud dir "push")))))
 
-(def- submodules-status-line-peg "pattern to parse a line from git submodules status for it's submodule path"
-  (peg/compile ~(* (+ " " "+" "-") (40 :w) " " (<- (to (+ " " -1))) (? (* " " (to -1))))))
-
-(defn ls-submodules
-  "lists submodule paths in the repo at dir, if recursive is true this is done recursivly"
-  [dir &named recursive]
-  (def lines (string/split "\n" (if recursive
-                                  (exec-slurp dir "submodule" "status" "--recursive")
-                                  (exec-slurp dir "submodule" "status"))))
-  (map |(first (peg/match submodules-status-line-peg $0)) lines))
-
-(defn ls-submodules
-  "lists submodule paths in the repo at dir, if recursive is true this is done recursivly"
-  [dir &named recursive]
-  (def lines (string/split "\n" (if recursive
-                                  (exec-slurp dir "submodule" "status" "--recursive")
-                                  (exec-slurp dir "submodule" "status"))))
-  (map |(first (peg/match submodules-status-line-peg $0)) lines))
-
 (defn fsck [dir &named no-recurse]
   (print "Executing fsck at root")
   (loud dir "fsck")
   (print)
-  (each submodule-path (ls-submodules dir :recursive (not no-recurse))
+  (each submodule-path (ls-submodule-paths dir :recursive (not no-recurse))
     (def path (path/join dir submodule-path))
     (print "Executing fsck at " submodule-path)
     (loud path "fsck")
