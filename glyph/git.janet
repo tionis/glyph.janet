@@ -59,12 +59,14 @@
 
 (defn pull
   "git pull the specified repo with modifiers"
-  [dir &named background silent]
+  [dir &named background silent remote]
+  (def args @["pull" "--recurse-submodules=on-demand" "--autostash"])
+  (if remote (array/push args remote))
   (if background
-    (do (async dir "pull" "--recurse-submodules=on-demand" "--autostash"))
+    (do (async dir ;args))
     (do (if silent
-          (exec-slurp dir "pull" "--recurse-submodules=on-demand")
-          (loud dir "pull" "--recurse-submodules=on-demand")))))
+          (exec-slurp dir ;args)
+          (loud dir ;args)))))
 
 (defn ls-submodules
   [dir]
@@ -90,7 +92,9 @@
 
 (defn push
   "git push the specified repo with modifiers"
-  [dir &named async silent ensure-pushed]
+  [dir &named async silent ensure-pushed remote]
+  (def args @["push"])
+  (if remote (array/push args remote))
   (if ensure-pushed
     (each submodule-path (ls-submodule-paths dir :recursive true)
       (try
@@ -98,10 +102,10 @@
             (push submodule-path :async async :silent silent))
         ([err] (print "Skipping " submodule-path " due to " err)))))
   (if async
-    (do (async dir "push"))
+    (do (async dir ;args))
     (do (if silent
-          (exec-slurp dir "push")
-          (loud dir "push")))))
+          (exec-slurp dir ;args)
+          (loud dir ;args)))))
 
 (defn fsck [dir &named no-recurse]
   (print "Executing fsck at root")
@@ -152,7 +156,6 @@
 (defn default-branch
   "get the default branch of optional remote"
   [dir &named remote]
-  # TODO fetch remote when HEAD information does not exist?
   (default remote "origin")
   (let [remote-head-result (exec-slurp-all dir "rev-parse" "--abbrev-ref" (string remote "/HEAD"))]
     (if (= (remote-head-result :code) 0)

@@ -18,8 +18,10 @@
 (defn shell/submodule [module-dir submodule &named commit command]
   (os/cd submodule)
   (def submodule-dir (os/cwd))
-  (git/async module-dir "pull")
-  # TODO auto pull submodule if a branch is checked out, do nothing when head is detached?
+  (try
+    (do (git/current-branch)
+        (git/async module-dir "pull"))
+    ([err] (print "not pulling submodule due to " err)))
   (if command
     (os/execute [(os/getenv "SHELL") "-c" command] :p)
     (os/execute [(os/getenv "SHELL")] :p))
@@ -50,9 +52,7 @@
       (shell/root module-dir :command (res "command"))
       (shell/submodule module-dir selected :command (res "command") :commit commit-in-submodules)))
 
-# TODO implement these helpers
-(defn generic/sync [&opt target])
-(defn generic/setup [])
-(defn generic/bundle [])
-(defn generic/glyph-info [supported-operations]
-  (printf "%j" {:supported (if supported-operations supported-operations [:sync :fsck :setup :bundle])}))
+(defn generic/sync [&named remote]
+  (def root (os/cwd))
+  (git/pull root :remote remote)
+  (git/push root :remote remote :ensure-pushed true))

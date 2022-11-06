@@ -13,7 +13,17 @@
     :openbsd "/dev/null"
     :posix "/dev/null"))
 
-(defn cli/rm [name]) # TODO implement this
+(defn cli/rm [name]
+  (def root (os/cwd))
+  (def path (git/exec-slurp root "config" "-f" ".gitmodules" (string "submodule." name ".path")))
+  (git/loud root "submodule" "--quiet" "deinit" "--force" path)
+  (sh/rm path)
+  (git/loud root "rm" "--cached" "-rfq" path)
+  (git/loud root "config" "-f" ".gitmodules" "--remove-section" (string "submodule." name))
+  (sh/rm (path/join ".git" "modules" path))
+  (git/loud root "add" ".gitmodules")
+  (git/loud root "commit" "-m" (string "removed " name " module"))
+  (git/push root))
 
 (defn cli/add [remote &opt name]
   (default name (first (peg/match ~(* "git@" (thru ":") (capture (any 1))) remote)))
