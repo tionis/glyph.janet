@@ -20,8 +20,8 @@
   (if (not remote) (error "could not detect name automatically"))
   (def root (os/cwd))
   (git/loud root "submodule" "add" remote name)
-  (git/slurp root "add" name)
-  (git/slurp root "commit" "-m" (string "added " name))
+  (git/loud root "add" name)
+  (git/loud root "commit" "-m" (string "added " name))
   (git/async root "push"))
 
 (defn cli/help []
@@ -65,8 +65,8 @@
   #(if changes_in_module (git-sync-changes/async)) # TODO implement this
   (if new_commits_in_module
       (do (git/async module "push")
-          (git/slurp root "add" module)
-          (git/slurp root "commit" "-m" (string "updated " module-name))
+          (git/loud root "add" module)
+          (git/loud root "commit" "-m" (string "updated " module-name))
           (git/async root "push"))))
 
 (defn main [myself & args]
