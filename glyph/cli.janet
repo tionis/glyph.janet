@@ -115,6 +115,16 @@
 
 (defn cli/sync [args] (sync))
 
+(defn cli/tools/ensure-pull-merges-submodules
+  []
+  (git/submodules/update/set (util/arch-dir) "merge" :show-message true :recursive true))
+
+(defn cli/tools [args]
+  (case (first args)
+    "ensure-pull-merges-submodules" (cli/tools/ensure-pull-merges-submodules)
+    (print `Unknown command! Available commands:
+             ensure-pull-merges-submodules - ensure that new commits in submodules are merged in rather than checked out via the submodule.NAME.update git config option. this is done recursively.`)))
+
 (defn print-root-help []
   (def preinstalled `Available Subcommands:
                       modules - manage your custom modules, use 'glyph modules help' for more information
@@ -138,6 +148,7 @@
     "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice args 1 -1)] :p))
     "fsck" (cli/fsck (slice args 1 -1))
     "sync" (cli/sync (slice args 1 -1))
+    "tools" (cli/tools (slice args 1 -1))
     "help" (print-root-help)
     "--help" (print-root-help)
     "-h" (print-root-help)

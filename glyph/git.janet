@@ -2,16 +2,6 @@
 (import spork/path)
 (import ./jobs)
 
-(defn get-null-file "get the /dev/null equivalent for current platform" []
-  (case (os/which)
-    :windows "NUL"
-    :macos "/dev/null"
-    :web (error "Unsupported Operation")
-    :linux "/dev/null"
-    :freebsd "/dev/null"
-    :openbsd "/dev/null"
-    :posix "/dev/null"))
-
 (defn exec-slurp
   "given a config and some arguments execute the git subcommand on wiki"
   [dir & args]
@@ -71,16 +61,19 @@
   "git pull the specified repo with modifiers"
   [dir &named background silent]
   (if background
-    (do (async dir "pull" "--recurse-submodules=on-demand"))
+    (do (async dir "pull" "--recurse-submodules=on-demand" "--autostash"))
     (do (if silent
           (exec-slurp dir "pull" "--recurse-submodules=on-demand")
           (loud dir "pull" "--recurse-submodules=on-demand")))))
 
 (defn ls-submodules
   [dir]
-  (def lines (string/split "\n" (exec-slurp "config" "--file" (path/join dir ".gitmodules") "--name-only" "--get-regexp" "submodule.*.path")))
-  (def patt (peg/compile ~(* "submodule." (capture (any (* (not (* ".path" -1)) 1))) ".path" -1)))
-  (map |(peg/match patt $0) lines))
+  (def gitmodules-path (path/join dir ".gitmodules"))
+  (if (not (os/stat gitmodules-path))
+    []
+    (let [lines (string/split "\n" (exec-slurp dir "config" "--file" gitmodules-path "--name-only" "--get-regexp" "submodule.*.path"))
+          patt (peg/compile ~(* "submodule." (capture (any (* (not (* ".path" -1)) 1))) ".path" -1))]
+      (map |(first (peg/match patt $0)) lines))))
 
 (defn current-branch
   [dir]
@@ -142,9 +135,20 @@
 
 (defn submodules/update/set
   "set the update method of all submodules to value"
-  [dir value]
+  [dir value &named show-message recursive]
   (each submodule-name (ls-submodules dir)
-    (loud dir "config" (string "submodules." submodule-name ".update") value)))
+    (if show-message
+      (if value
+        (print "setting submodule." submodule-name ".update to " value)
+        (print "unsetting submodule." submodule-name ".update")))
+    (if value
+      (loud dir "config" (string "submodule." submodule-name ".update") value)
+      (loud dir "config" "--unset" (string "submodule." submodule-name ".update"))))
+  (if recursive
+    (let [paths (map |(path/join dir $0) (ls-submodule-paths dir :recursive true))]
+      (each path paths
+        (if show-message (print "Entering " path "..."))
+        (submodules/update/set path value :show-message show-message)))))
 
 (defn default-branch
   "get the default branch of optional remote"
