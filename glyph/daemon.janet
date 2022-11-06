@@ -1,5 +1,7 @@
 (import spork/rpc)
 
+# TODO fork spork/rpc to support unix domain sockets
+
 # TODO allow adding jobs
 # TODO launch in background automatically
 # TODO support jobs interface
@@ -19,8 +21,8 @@
 (defn ensure
   `ensure that a functioning daemon is running in the background
   checks wether a daemon is running and starts a new one if not`
-  []
-  (if (not (check)) (os/execute :t)))
+  [])
+  #(if (not (check)) (os/execute :t)))
 
 (defn cleanup [])
 

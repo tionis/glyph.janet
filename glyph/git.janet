@@ -76,24 +76,34 @@
           (exec-slurp dir "pull" "--recurse-submodules=on-demand")
           (loud dir "pull" "--recurse-submodules=on-demand")))))
 
-(defn get-current-branch
+(defn ls-submodules
   [dir]
-  # TODO implement this
-  )
+  (def lines (string/split "\n" (exec-slurp "config" "--file" (path/join dir ".gitmodules") "--name-only" "--get-regexp" "submodule.*.path")))
+  (def patt (peg/compile ~(* "submodule." (capture (any (* (not (* ".path" -1)) 1))) ".path" -1)))
+  (map |(peg/match patt $0) lines))
+
+(defn current-branch
+  [dir]
+  (def result (exec-slurp dir "rev-parse" "--abbrev-ref" "--symbolic-full-name" "HEAD"))
+  (if (= result "HEAD")
+    (error "HEAD is detached")
+    result))
 
 (defn get-unpushed-changes
   [dir &named fetch]
   (if fetch (loud dir fetch))
-  (def branch (get-current-branch dir))
-  (string/split "\n" (exec-slurp dir "rev-list" "--oneline" (string "^origin/" branch) branch)))
+  (def branch (current-branch dir))
+  (filter |(if (= $0 "") false true) (string/split "\n" (exec-slurp dir "rev-list" "--oneline" (string "^origin/" branch) branch))))
 
 (defn push
   "git push the specified repo with modifiers"
   [dir &named async silent ensure-pushed]
   (if ensure-pushed
-    (each submodule-path (ls-submodule-paths dir)
-      (if (> (length (get-unpushed-changes submodule-path)) 0)
-          (push submodule-path :async async :silent silent))))
+    (each submodule-path (ls-submodule-paths dir :recursive true)
+      (try
+        (if (> (length (get-unpushed-changes submodule-path)) 0)
+            (push submodule-path :async async :silent silent))
+        ([err] (print "Skipping " submodule-path " due to " err)))))
   (if async
     (do (async dir "push"))
     (do (if silent
@@ -133,15 +143,15 @@
 (defn submodules/update/set
   "set the update method of all submodules to value"
   [dir value]
-  ())
-
+  (each submodule-name (ls-submodules dir)
+    (loud dir "config" (string "submodules." submodule-name ".update") value)))
 
 (defn default-branch
-  "get the default branch of remote"
+  "get the default branch of optional remote"
   [dir &named remote]
+  # TODO fetch remote when HEAD information does not exist?
   (default remote "origin")
   (let [remote-head-result (exec-slurp-all dir "rev-parse" "--abbrev-ref" (string remote "/HEAD"))]
     (if (= (remote-head-result :code) 0)
-      (remote-head-result :out)
-      "main" # TODO this is a hack an won't work for other people
-      )))
+      (peg/match ~(* remote "/" (capture (any 1))) (remote-head-result :out))
+      (current-branch dir)))) # default to current branch if remote hash no HEAD
