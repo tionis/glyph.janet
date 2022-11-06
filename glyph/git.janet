@@ -139,15 +139,14 @@
   (each submodule-name (ls-submodules dir)
     (if show-message
       (if value
-        (print "setting submodule." submodule-name ".update to " value)
-        (print "unsetting submodule." submodule-name ".update")))
+        (print dir ": submodule." submodule-name ".update set to " value)
+        (print dir ": submodule." submodule-name ".update unset")))
     (if value
       (loud dir "config" (string "submodule." submodule-name ".update") value)
       (loud dir "config" "--unset" (string "submodule." submodule-name ".update"))))
   (if recursive
     (let [paths (map |(path/join dir $0) (ls-submodule-paths dir :recursive true))]
       (each path paths
-        (if show-message (print "Entering " path "..."))
         (submodules/update/set path value :show-message show-message)))))
 
 (defn default-branch
