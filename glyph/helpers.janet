@@ -33,7 +33,7 @@
       (do (git/push submodule-dir :background true)
           (git/loud module-dir "add" submodule)
           (git/loud module-dir "commit" "-m" (string "updated " submodule))
-          (git/push module-dir :background true)))
+          (git/push module-dir :background true))))
 
 (defn shell [module-dir args &named commit-in-submodules]
   (setdyn :args [module-dir ;args])
