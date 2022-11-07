@@ -19,7 +19,7 @@
   (os/cd submodule)
   (def submodule-dir (os/cwd))
   (try
-    (do (git/current-branch)
+    (do (git/current-branch module-dir)
         (git/pull module-dir :background true))
     ([err] (print "not pulling submodule due to " err)))
   (if command
