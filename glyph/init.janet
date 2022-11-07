@@ -6,7 +6,6 @@
 (import ./config :prefix "" :export true)
 (import ./modules :prefix "" :export true)
 (import ./scripts :export true)
-(import ./jobs :export true)
 (import ./daemon :export true)
 
 (defn sync
@@ -14,7 +13,6 @@
   []
   (git/pull (util/arch-dir))
   (scripts/sync/exec)
-  (daemon/ensure)
   (git/push (util/arch-dir)))
 
 (defn fsck []
