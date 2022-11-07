@@ -54,7 +54,7 @@
   [dir & args]
   (def fout (sh/devnull))
   (def ferr (sh/devnull))
-  (os/execute ["git" "-C" dir ;args] :p))
+  (os/execute ["git" "-C" dir ;args] :pd))
   #(daemon/add-job ["git" "-C" dir ;args])) # TODO use glyph background daemon if possible
 
 (defn pull
