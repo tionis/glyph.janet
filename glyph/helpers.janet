@@ -56,3 +56,14 @@
   (def root (os/cwd))
   (git/pull root :remote remote)
   (git/push root :remote remote :ensure-pushed true))
+
+(defn nested-module [module-path args]
+  (def prev (os/cwd))
+  (git/pull prev :background true)
+  (os/cd module-path)
+  (os/execute [".main" ;args])
+  (os/cd prev)
+  (if ((git/changes (os/cwd)) module-path)
+    (do (git/loud prev "add" module-path)
+        (git/loud prev "commit" "-m" (string "changes in " module-path))
+        (git/push prev :background true))))
