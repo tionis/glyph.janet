@@ -37,7 +37,7 @@
 
 (defn add-job
   [args &named note priority qname timeout expiration input]
-  (def client (get-client))
+  (def client (client))
   (:add-job client args note priority qname timeout expiration input)
   (:close client))
 
@@ -86,7 +86,6 @@
 (defn sync/enable
   "enabled the daemon sync"
   []
-  (with)
   # TODO set config option
   # TODO send command to daemon if running
   )
@@ -111,7 +110,7 @@
      :sync/disable sync/disable
      :sync/enable sync/enable
      :shutdown shutdown
-     :sync ()
+     :sync (fn [x] x)
      :add-job daemon-add-job
      :ping (fn [] :pong)}
     :unix (get-socket-path)))
