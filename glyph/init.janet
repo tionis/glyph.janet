@@ -13,7 +13,7 @@
   []
   (git/pull (util/arch-dir))
   (scripts/sync/exec)
-  (git/push (util/arch-dir)))
+  (git/push (util/arch-dir) :ensure-pushed true))
 
 (defn fsck []
   (def arch-dir (util/arch-dir))

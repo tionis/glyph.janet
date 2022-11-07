@@ -86,23 +86,27 @@
 
 (defn get-unpushed-changes
   [dir &named fetch]
-  (if fetch (loud dir fetch))
-  (def branch (current-branch dir))
-  (filter |(if (= $0 "") false true) (string/split "\n" (exec-slurp dir "rev-list" "--oneline" (string "^origin/" branch) branch))))
+  (if (os/stat (path/join dir ".git"))
+    (do (if fetch (loud dir fetch))
+        (def branch (current-branch dir))
+        (filter |(if (= $0 "") false true)
+                (string/split "\n" (exec-slurp dir "rev-list" "--oneline" (string "^origin/" branch) branch))))
+    []))
 
 (defn push
   "git push the specified repo with modifiers"
-  [dir &named async silent ensure-pushed remote]
+  [dir &named silent ensure-pushed remote background]
   (def args @["push"])
   (if remote (array/push args remote))
   (if ensure-pushed
     (each submodule-path (ls-submodule-paths dir :recursive true)
       (try
-        (if (> (length (get-unpushed-changes submodule-path)) 0)
-            (push submodule-path :async async :silent silent))
+        (do (def unpushed-changes (get-unpushed-changes submodule-path))
+            (if (> (length unpushed-changes) 0)
+                (push submodule-path)))
         ([err] (print "Skipping " submodule-path " due to " err)))))
-  (if async
-    (do (async dir ;args))
+  (if background
+    (async dir ;args)
     (do (if silent
           (exec-slurp dir ;args)
           (loud dir ;args)))))
