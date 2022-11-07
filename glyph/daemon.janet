@@ -17,7 +17,6 @@
 (defn sync/enable
   "enabled the daemon sync"
   []
-  (with)
   # TODO set config option
   # TODO send command to daemon if running
   )
