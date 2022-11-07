@@ -1,4 +1,5 @@
-(import spork/rpc)
+(use spork)
+(import ./util)
 
 # TODO fork spork/rpc to support unix domain sockets
 
@@ -6,6 +7,8 @@
 # TODO launch in background automatically
 # TODO support jobs interface
 # TODO also add sync support to daemon for setups with no automatic cron/systemd based sync
+(defn get-socket-path [] (path/join (util/arch-dir) ".git" "glyph-daemon.socket"))
+
 (defn sync [])
 
 (defn launch []

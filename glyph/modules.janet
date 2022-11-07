@@ -39,7 +39,7 @@
             (if ((git/changes arch-dir) (module :path))
                 (do (git/loud arch-dir "add" (module :path))
                     (git/loud arch-dir "commit" "-m" (string "updated " name))
-                    (git/async arch-dir "push")))))
+                    (git/push arch-dir :background true)))))
     (if (index-of name (scripts/ls))
       (do (os/cd (util/arch-dir)) (os/execute [(path/join ".scripts" name) ;args]))
       (do (eprint (string "neither a module nor a user script called " name " exists, use help to list existing ones"))

@@ -32,7 +32,7 @@
   (git/loud root "submodule" "add" remote name)
   (git/loud root "add" name)
   (git/loud root "commit" "-m" (string "added " name))
-  (git/async root "push"))
+  (git/push root :background true))
 
 (defn cli/help []
   (print `Available commands:
@@ -49,35 +49,28 @@
                                 (sh/exec-slurp "git" "config" "--file" ".gitmodules" "--get-regexp" "path")))
     (print (item 1))))
 
-(defn cli/sync [&opt flags]
-  (if (and flags (> (length flags) 0))
-      (do (error "not implemented yet"))
-      (do (print "simple sync")
-          (if (not= 0 (os/execute ["git" "pull" "--no-rebase" "--no-edit" "-j8"] :p {"MERGE_AUTOSTASH" "true"})) (error "sync failed during pull"))
-          (if (not= 0 (os/execute ["git" "push"] :p)) (error "sync failed during push")))))
-
 (defn get-cached-modules []
   (filter os/dir (map |((string/split " " $0) 1) (string/split "\n" (sh/exec-slurp "git" "config" "--file" ".gitmodules" "--get-regexp" "path")))))
 
 (defn cli/shell [path]
   (def root (os/cwd))
-  (git/async root "pull")
+  (git/pull root :background true)
   (if path
       (os/cd path)
       (os/cd (jeff/choose "module> " (get-cached-modules) :keywords? true)))
   (def module (path/abspath (os/cwd)))
   (def module-name (misc/trim-prefix (string root "/") module))
-  (git/async module "pull")
+  (git/pull module :background true)
   # TODO monitor repo and execute git-sync-changes here
   (os/execute [(let [dev_shell_env (os/getenv "DEV_SHELL")] (if dev_shell_env dev_shell_env "bash"))] :p)
   (def new_commits_in_module ((git/changes root) module-name)) # TODO this will trigger for new commits and modified working tree, should only detect new commits
   (def changes_in_module (> (length (git/changes module)) 0))
   #(if changes_in_module (git-sync-changes/async)) # TODO implement this
   (if new_commits_in_module
-      (do (git/async module "push")
+      (do (git/push module :background true)
           (git/loud root "add" module)
           (git/loud root "commit" "-m" (string "updated " module-name))
-          (git/async root "push"))))
+          (git/push root :background true))))
 
 (defn main [myself & args]
   (match args
@@ -88,5 +81,4 @@
     ["ls" & patterns] (cli/ls patterns)
     ["shell" path] (cli/shell path)
     ["shell"] (cli/shell nil)
-    ["sync" & flags] (cli/sync flags)
     _ (cli/help)))

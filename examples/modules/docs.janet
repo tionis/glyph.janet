@@ -12,14 +12,14 @@
 
 (defn cli/nested-module [args]
   (def prev (os/cwd))
-  (git/async prev "pull")
+  (git/pull prev :background true)
   (os/cd "nested-module")
   (os/execute [".main" ;args])
   (os/cd prev)
   (if ((git/changes (os/cwd)) "studip")
     (do (git/loud prev "add" "studip")
         (git/loud prev "commit" "-m" "nested-module")
-        (git/async prev "push"))))
+        (git/push prev :background true))))
 
 (defn main [myself & args]
   (case (first args)

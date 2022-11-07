@@ -6,21 +6,21 @@
 
 (defn shell/root [module-dir &named command]
   (os/cd module-dir)
-  (git/async module-dir "pull")
+  (git/pull module-dir :background true)
   (if command
     (os/execute [(os/getenv "SHELL") "-c" command] :p)
     (os/execute [(os/getenv "SHELL")] :p))
   (if (not= (length (git/changes module-dir)) 0)
       (do (git/loud module-dir "add" "-A")
           (git/loud module-dir "commit" "-m" "updated contents manually in shell")))
-  (git/async module-dir "push"))
+  (git/push module-dir :background true))
 
 (defn shell/submodule [module-dir submodule &named commit command]
   (os/cd submodule)
   (def submodule-dir (os/cwd))
   (try
     (do (git/current-branch)
-        (git/async module-dir "pull"))
+        (git/pull module-dir :background true))
     ([err] (print "not pulling submodule due to " err)))
   (if command
     (os/execute [(os/getenv "SHELL") "-c" command] :p)
@@ -30,10 +30,10 @@
       (do (git/loud submodule-dir "add" "-A")
           (git/loud submodule-dir "commit" "-m" "updated contents manually in shell"))))
   (if ((git/changes module-dir) submodule) # TODO BUG this does not only detect new commits but also working tree modifications
-      (do (git/async submodule-dir "push")
+      (do (git/push submodule-dir :background true)
           (git/loud module-dir "add" submodule)
           (git/loud module-dir "commit" "-m" (string "updated " submodule))
-          (git/async module-dir "push"))))
+          (git/push module-dir :background true)))
 
 (defn shell [module-dir args &named commit-in-submodules]
   (setdyn :args [module-dir ;args])

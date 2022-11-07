@@ -1,12 +1,12 @@
 (import ./markdown :as "md" :export true)
 (import ./graph :export true)
 (import chronos :as "date")
-(import ./git)
+(import ../git)
 #(import fzy :as "fzy")
 (import jeff/ui :as "jeff")
 (import spork :prefix "")
-(import ./util)
-(import ./glob)
+(import ../util)
+(import ../glob)
 (import uri)
 #(use ./log-item) # disabled due to being unfinished
 
@@ -48,13 +48,13 @@
         (if name
             (each item2 items
               (if (= item2 (name 0))
-                  (do (fs/copy-file item (path/join "name" "index.md"))
+                  (do (sh/copy-file item (path/join "name" "index.md"))
                       (os/rm item)))))))))
 
 (defn indexify_dirs_recursivly
   "transform dirs recursivly to index.md based md structure starting at path"
   [path]
-  (fs/scan-directory path (fn [x]
+  (sh/scan-directory path (fn [x]
                                     (if (= ((os/stat x) :mode) :directory)
                                         (indexify_dir x)))))
 
@@ -117,7 +117,7 @@
   [config file] # TODO check via graph what links are broken by that and warn user, ask them if they still want to continue (do not ask if (get-in config [:argparse "force"]) is true)
   (git/loud (config :wiki-dir) "rm" (string file ".md"))
   (commit config (string "deleted " file))
-  (if (config :sync) (git/async (config :wiki-dir) "push")))
+  (if (config :sync) (git/push (config :wiki-dir) :background true)))
 
 (defn rm/interactive
   "delete document select interactivly"
@@ -135,7 +135,7 @@
   (if (not (os/stat parent_dir))
     (do (prin "Creating parent directories for " file " ... ")
         (flush)
-        (fs/create-directories parent_dir)
+        (sh/create-dirs parent_dir)
         (print "Done.")))
   (if (= (config :editor) :cat)
       (print (slurp file_path))
@@ -147,7 +147,7 @@
           (= change-count 0) (do (print "No changes, not commiting..."))
           (= change-count 1) (do (git/loud (config :wiki-dir) "add" "-A") (commit config (string "updated " file)))
           (> change-count 1) (do (git/loud (config :wiki-dir) "add" "-A") (commit config (string "session from " file))))
-        (if (> change-count 0) (if (config :sync)(git/async (config :wiki-dir) "push"))))))
+        (if (> change-count 0) (if (config :sync) (git/push (config :wiki-dir) :background true))))))
 
 (defn trim-prefix [prefix str]
   (if (string/has-prefix? prefix str)
@@ -198,13 +198,13 @@
   (if (not (os/stat target_parent_dir))
     (do (prin "Creating parent directories for " target_path " ... ")
         (flush)
-        (fs/create-directories target_parent_dir)
+        (sh/create-dirs target_parent_dir)
         (print "Done.")))
   (git/loud (config :wiki-dir) "mv" source_path target_path)
   (git/loud (config :wiki-dir) "add" source_path)
   (git/loud (config :wiki-dir) "add" target_path)
   (commit config (string "moved " source " to " target))
-  (if (config :sync) (git/async (config :wiki-dir) "push")))
+  (if (config :sync) (git/push (config :wiki-dir) :background true)))
 
 (def patt_md_without_header "PEG-Pattern that captures the content of a markdown file without the metadata header"
   (peg/compile ~(* (opt (* "---\n" (any (* (not "\n---\n") 1)) "\n---\n" (opt "\n"))) (capture (* (any 1))))))
@@ -318,9 +318,8 @@
 (defn sync
   "synchronize wiki specified by config synchroniously"
   [config]
-  # TODO sync all modules
-  (os/execute ["git" "-C" (config :wiki-dir) "pull"] :p)
-  (os/execute ["git" "-C" (config :wiki-dir) "push"] :p))
+  (git/pull (config :wiki-dir))
+  (git/push (config :wiki-dir) :ensure-push true))
 
 (def- positional-args-help-string
   `Command to run or document to open
@@ -388,7 +387,7 @@
   (if (config :sync)
       (if (and (not (res "no_pull"))
                (not (= args @["sync"]))) # ensure pull is not executed two times for manual sync
-          (git/async (config :wiki-dir) "pull")))
+          (git/pull (config :wiki-dir) :background true)))
   (match args
     ["help"] (print positional-args-help-string)
     ["search" & search_terms] (search config (string/join search_terms " "))

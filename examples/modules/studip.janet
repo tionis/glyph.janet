@@ -30,7 +30,7 @@
   (if (>= (length (git/changes cwd)) 0)
     (do (git/loud cwd "add" ".config.jdn")
         (git/loud cwd "commit" "-m" "selected new semester")
-        (git/async cwd "push"))))
+        (git/push cwd :background true))))
 
 (defn sync [studip-dir semester-id]
   (def user-id ((studip/get "/user") "user_id"))
@@ -90,7 +90,7 @@
   (if (> (length (git/changes cwd)) 0)
     (do (git/loud cwd "add" "-A")
         (git/loud cwd "commit" "-m" "synced new files")
-        (git/async cwd "push"))))
+        (git/push cwd :background true))))
 
 (defn help []
   (print `Available commands:
@@ -100,7 +100,7 @@
 
 (defn main [myself & args]
   (def cwd (os/cwd))
-  (git/async cwd "pull")
+  (git/pull cwd :background true)
   (def studip-dir (os/cwd))
 
   (if (not (os/stat (path/join studip-dir ".config.jdn")))
