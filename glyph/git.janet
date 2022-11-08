@@ -47,7 +47,7 @@
   (def lines (string/split "\n" (if recursive
                                   (exec-slurp dir "submodule" "status" "--recursive")
                                   (exec-slurp dir "submodule" "status"))))
-  (map |(first (peg/match submodules-status-line-peg $0)) lines))
+  (filter (fn [x] ) (map |(first (peg/match submodules-status-line-peg $0)) lines)))
 
 (defn async
   "given a git dir and some arguments execute the git subcommand on the given repo asynchroniously"
