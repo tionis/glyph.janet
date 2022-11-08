@@ -1,7 +1,7 @@
   :name "glyph"
 (declare-project
   :description "a personal data manager for the command line"
-  :dependencies  ["https://github.com/tionis/spork" # TODO change back to non-fork version once changes are merged
+  :dependencies  ["https://github.com/janet-lang/spork"
                   "https://git.sr.ht/~pepe/jfzy" # TODO this can probably be removed, but is still required by jff as a transitive dependency
                   "https://tasadar.net/tionis/jeff.git" # TODO this needs UI improvements
                   "https://github.com/tionis/remarkable" # TODO this needs tags support
