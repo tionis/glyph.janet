@@ -49,6 +49,12 @@
                                   (exec-slurp dir "submodule" "status"))))
   (filter (fn [x] x) (map |(first (peg/match submodules-status-line-peg $0)) lines)))
 
+(defn get-object-path
+  [dir object-id &named tree]
+  (default tree "HEAD")
+  (first (peg/match ~(any (+ (* ,object-id " " (capture (to (+ "\n" -1))) (+ "\n" -1)) (thru (+ -1 "\n"))))
+                    (exec-slurp dir "ls-tree" "-r" "--format=%(objectname) %(path)" tree))))
+
 (defn async
   "given a git dir and some arguments execute the git subcommand on the given repo asynchroniously"
   [dir & args]
