@@ -54,7 +54,10 @@
         (jeff/choose "select shell path> " submodules)))
   (if (= selected ".")
       (shell/root module-dir :command (res "command"))
-      (shell/submodule module-dir selected :command (res "command") :commit (or commit-in-submodules (res "commit-in-submodules") :message (res "submodule-commit-message"))))
+      (shell/submodule module-dir selected
+                       :command (res "command")
+                       :commit (or commit-in-submodules (res "commit-in-submodules"))
+                       :message (res "submodule-commit-message"))))
 
 (defn generic/sync [&named remote]
   (def root (os/cwd))
