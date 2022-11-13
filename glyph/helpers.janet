@@ -15,7 +15,7 @@
           (git/loud module-dir "commit" "-m" "updated contents manually in shell")))
   (git/push module-dir :background true))
 
-(defn shell/submodule [module-dir submodule &named commit command]
+(defn shell/submodule [module-dir submodule &named commit command message]
   (os/cd submodule)
   (def submodule-dir (os/cwd))
   (try
@@ -28,7 +28,7 @@
   (if commit
     (if (> (length (git/changes submodule-dir)) 0)
       (do (git/loud submodule-dir "add" "-A")
-          (git/loud submodule-dir "commit" "-m" "updated contents manually in shell"))))
+          (git/loud submodule-dir "commit" "-m" (if message message "updated contents manually in shell")))))
   (if ((git/changes module-dir) submodule) # TODO BUG this does not only detect new commits but also working tree modifications
       (do (git/push submodule-dir :background true)
           (git/loud module-dir "add" submodule)
@@ -41,6 +41,10 @@
                               "command" {:kind :option
                                          :short "c"
                                          :help "execute command in shell (passed to shell via the -c flag)"}
+                              "commit-in-submodules" {:kind :flag
+                                                      :help "commit automatically in submodules"}
+                              "submodule-commit-message" {:kind :option
+                                                          :help "commit message in submodules"}
                               :default {:kind :accumulate}))
   (unless res (os/exit 1))
   (def submodules (array/concat (git/ls-submodule-paths module-dir) ["."]))
@@ -50,7 +54,7 @@
         (jeff/choose "select shell path> " submodules)))
   (if (= selected ".")
       (shell/root module-dir :command (res "command"))
-      (shell/submodule module-dir selected :command (res "command") :commit commit-in-submodules)))
+      (shell/submodule module-dir selected :command (res "command") :commit (or commit-in-submodules (res "commit-in-submodules") :message (res "submodule-commit-message"))))
 
 (defn generic/sync [&named remote]
   (def root (os/cwd))
