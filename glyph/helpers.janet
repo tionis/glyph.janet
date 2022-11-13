@@ -35,7 +35,7 @@
           (git/loud module-dir "commit" "-m" (string "updated " submodule))
           (git/push module-dir :background true))))
 
-(defn shell [module-dir args &named commit-in-submodules]
+(defn shell [module-dir args &named commit-in-submodules command submodule-commit-message]
   (setdyn :args [module-dir ;args])
   (def res (argparse/argparse "simple shell"
                               "command" {:kind :option
@@ -53,11 +53,11 @@
         (first (res :default))
         (jeff/choose "select shell path> " submodules)))
   (if (= selected ".")
-      (shell/root module-dir :command (res "command"))
+      (shell/root module-dir :command (if command command (res "command")))
       (shell/submodule module-dir selected
-                       :command (res "command")
+                       :command (if command command (res "command"))
                        :commit (or commit-in-submodules (res "commit-in-submodules"))
-                       :message (res "submodule-commit-message"))))
+                       :message (if submodule-commit-message submodule-commit-message (res "submodule-commit-message")))))
 
 (defn generic/sync [&named remote]
   (def root (os/cwd))
