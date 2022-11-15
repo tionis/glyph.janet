@@ -1,6 +1,6 @@
 (import ./git :export true)
 (import spork :prefix "" :export true)
-(import jeff/ui :as "jeff" :export true)
+(import jeff :export true)
 (import fzy :export true)
 (import ./glob :export true)
 
@@ -51,7 +51,7 @@
   (def selected
     (if (res :default)
         (first (res :default))
-        (jeff/choose "select shell path> " submodules)))
+        (jeff/choose submodules :prmpt "select shell path> ")))
   (if (= selected ".")
       (shell/root module-dir :command (if command command (res "command")))
       (shell/submodule module-dir selected

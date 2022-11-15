@@ -3,7 +3,7 @@
 (import chronos :as "date")
 (import ../git)
 #(import fzy :as "fzy")
-(import jeff/ui :as "jeff")
+(import jeff)
 (import spork :prefix "")
 (import ../util)
 (import ../glob)
@@ -100,7 +100,7 @@
 (defn interactive-select
   "let user interactivly select an element of the given array"
   [arr]
-  (jeff/choose "" arr :keywords? true))
+  (jeff/choose arr :prmpt "" :keywords? true))
 
 (defn file/select
   "let user interactivly select a file, optionally accepts a files-override for a custom file set and preview-command to show the output of in a side window for the currently selected file"

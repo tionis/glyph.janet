@@ -1,7 +1,7 @@
 #!/bin/env janet
 (use spork)
 (import glyph/git)
-(import jeff/ui :as "jeff")
+(import jeff)
 
 (defn get-null-file "get the /dev/null equivalent for current platform" []
   (case (os/which)
@@ -57,7 +57,7 @@
   (git/pull root :background true)
   (if path
       (os/cd path)
-      (os/cd (jeff/choose "module> " (get-cached-modules) :keywords? true)))
+      (os/cd (jeff/choose (get-cached-modules) :prmpt "module> " :keywords? true)))
   (def module (path/abspath (os/cwd)))
   (def module-name (misc/trim-prefix (string root "/") module))
   (git/pull module :background true)
