@@ -22,7 +22,7 @@
 
 (defn select-semester [studip-dir config]
   (def semesters ((studip/get "/semesters") "collection"))
-  (def chosen (jeff/choose "semester> " (map |($0 "description") semesters)))
+  (def chosen (jeff/choose (map |($0 "description") semesters) :prmpt "semester> "))
   (def selected-semester (filter |(= ($0 "description") chosen) semesters))
   (put config :semester-id ((first selected-semester) "id"))
   (spit (path/join studip-dir ".config.jdn") (string/format "%j" config))
