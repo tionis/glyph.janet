@@ -12,6 +12,6 @@
 
 (declare-executable
   :name "glyph"
-  :lflags ["-static"]
+  #:lflags ["-static"] # disable due to compile errors on platforms like termux on ARM
   :entry "glyph/cli.janet"
   :install true)
