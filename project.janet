@@ -15,3 +15,7 @@
   #:lflags ["-static"] # disable due to compile errors on platforms like termux on ARM
   :entry "glyph/cli.janet"
   :install true)
+
+(declare-native
+  :name "_uri"
+  :source ["src/uri.c"])

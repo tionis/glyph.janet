@@ -7,7 +7,7 @@
 (import spork :prefix "")
 (import ../util)
 (import ../glob)
-(import uri)
+(import ../uri)
 #(use ./log-item) # disabled due to being unfinished
 
 (def patt-strip-file-ending (peg/compile ~(* (capture (some (* (not ".") 1))) "." (some 1))))
