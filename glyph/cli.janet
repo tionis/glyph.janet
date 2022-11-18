@@ -63,13 +63,24 @@
   (git/loud arch-dir "submodule" "deinit" "-f" (module-conf :path))
   (sh/rm (path/join arch-dir ".git" "modules" (module-conf :path))))
 
-(defn cli/setup [args]
+(defn cli/setup/modules [args]
+  (error "Not implemented yet")) # TODO implement modules setup using jeff multi select
+
+(defn cli/setup/help [args]
   (print `To setup your own glyph archive you just need to do following things:
            1. create a directory at $GLYPH_ARCH_DIR
            2. use glyph git init to initialize the git repo
            3. add a git remote
            4. add your glyph modules with glyph modules add
-           5. profit`))
+           5. profit
+         If you already have a glyph repo setup you can simply clone it via git clone.
+         After cloning use glyph setup modules to set up your modules`))
+
+(defn cli/setup [args]
+  (case (first args)
+    "modules" (cli/setup/modules (slice args 1 -1))
+    "help" (cli/setup/help (slice args 1 -1))
+    (cli/setup/help (slice args 1 -1))))
 
 (defn cli/modules [args]
   (case (first args)
@@ -139,6 +150,12 @@
 
 (defn main [myself & args]
   (def arch-dir (util/get-arch-dir))
+  (unless (let [stat (os/stat arch-dir)] (and stat (= (stat :mode) :directory)))
+    (eprint "Arch dir does not exist, please initialize it first!")
+    (print "Short setup description:")
+    (cli/setup/help [])
+    (print "For more information please refer to the glyph documentation")
+    (os/exit 1))
   (setdyn :arch-dir arch-dir)
   (case (first args)
     "setup" (cli/setup (slice args 1 -1))
