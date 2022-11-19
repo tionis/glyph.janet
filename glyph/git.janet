@@ -52,8 +52,10 @@
 (defn get-object-path
   [dir object-id &named tree]
   (default tree "HEAD")
-  (first (peg/match ~(any (+ (* ,object-id " " (capture (to (+ "\n" -1))) (+ "\n" -1)) (thru (+ -1 "\n"))))
-                    (exec-slurp dir "ls-tree" "-r" "--format=%(objectname) %(path)" tree))))
+  (def lines (filter (fn [x] (not= "" x)) (string/split "\0" (exec-slurp dir "ls-tree" "-z" "-r" tree))))
+  (def objects (map |(peg/match ~(* (capture (6 :d)) " " (capture (to " ")) " " (capture (to "\t")) "\t" (capture (to -1)))
+                              $0) lines))
+  (first (map |($0 3) (filter |(= ($0 2) object-id) objects))))
 
 (defn async
   "given a git dir and some arguments execute the git subcommand on the given repo asynchroniously"
