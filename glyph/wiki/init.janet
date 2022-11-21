@@ -4,6 +4,7 @@
 (import ../git)
 #(import fzy :as "fzy")
 (import jeff)
+(use ../helpers)
 (import spork :prefix "")
 (import ../util)
 (import ../glob)
@@ -333,6 +334,7 @@
     lint $optional_paths - lint whole wiki or a list of paths
     graph - show a graph of the wiki
     sync - sync the repo
+    shell - open a shell session in git repo and auto commit changes
     git $args - pass args thru to git`)
 
 (defn cli []
@@ -397,6 +399,7 @@
     ["mv" source target] (mv config source target)
     ["log" & date_arr] (log config date_arr)
     ["sync"] (sync config)
+    ["shell" & args] (shell (os/cwd) args 1 -1)
     ["lint" & patterns] (lint config patterns)
     ["graph" & args] (graph config args)
     [file] (edit config (string file ".md"))
