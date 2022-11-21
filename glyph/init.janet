@@ -13,7 +13,8 @@
   []
   (git/pull (util/arch-dir))
   (scripts/sync/exec)
-  (git/push (util/arch-dir) :ensure-pushed true))
+  (git/push (util/arch-dir) :ensure-pushed true)
+  (spit (path/join (util/arch-dir) ".git" "sync.status") (git/exec-slurp (util/arch-dir) "log" "@{u}..")))
 
 (defn fsck []
   (def arch-dir (util/arch-dir))
