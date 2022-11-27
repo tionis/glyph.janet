@@ -344,7 +344,7 @@
     "shell" (do (shell (os/cwd) (slice args 1 -1)) (os/exit 0))
     "git" (os/exit (os/execute ["git" ;(slice args 1 -1)] :p)))
   (def res (options/parse
-    :args args
+    :args (array/concat @[""] args)
     :description `A simple local cli wiki using git for synchronization
                  for help with commands use --command_help`
     :options {"command_help" {:kind :flag
