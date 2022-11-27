@@ -338,6 +338,10 @@
     git $args - pass args thru to git`)
 
 (defn cli []
+  # Parse special subcommands without evaluating normal options
+  (case (get (dyn :args) 1 nil)
+    "shell" (do (shell (os/cwd) (slice (dyn :args) 2 -1)) (os/exit 0))
+    "git" (os/exit (os/execute ["git" ;(slice (dyn :args) 2 -1)] :p)))
   (def res (argparse/argparse
     ```A simple local cli wiki using git for synchronization
        for help with commands use --command_help```
@@ -399,7 +403,6 @@
     ["mv" source target] (mv config source target)
     ["log" & date_arr] (log config date_arr)
     ["sync"] (sync config)
-    ["shell" & args] (shell (os/cwd) args 1 -1)
     ["lint" & patterns] (lint config patterns)
     ["graph" & args] (graph config args)
     [file] (edit config (string file ".md"))
