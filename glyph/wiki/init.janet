@@ -6,6 +6,7 @@
 (import jeff)
 (use ../helpers)
 (import spork :prefix "")
+(import ../options)
 (import ../util)
 (import ../glob)
 (import ../uri)
@@ -337,41 +338,42 @@
     shell - open a shell session in git repo and auto commit changes
     git $args - pass args thru to git`)
 
-(defn cli []
+(defn cli [args]
   # Parse special subcommands without evaluating normal options
-  (case (get (dyn :args) 1 nil)
-    "shell" (do (shell (os/cwd) (slice (dyn :args) 2 -1)) (os/exit 0))
-    "git" (os/exit (os/execute ["git" ;(slice (dyn :args) 2 -1)] :p)))
-  (def res (argparse/argparse
-    ```A simple local cli wiki using git for synchronization
-       for help with commands use --command_help```
-   "command_help" {:kind :flag
-                   :short "ch"
-                   :help "Prints command help"}
-   "no_commit" {:kind :flag
-                :short "nc"
-                :help "Do not commit changes"}
-   "no_sync" {:kind :flag
-              :short "ns"
-              :help "Do not automatically sync repo in background (does not apply to manual sync). This is enabled by default if $WIKI_NO_SYNC is set to \"true\""}
-   "force" {:kind :flag
-            :short "f"
-            :help "foce selected operation, works for rm & mv"}
-   "no_pull" {:kind :flag
-              :short "np"
-              :help "do not pull from repo"}
-   "ask-commit-message" {:kind :flag
-                         :short "ac"
-                         :help "ask for the commit message instead of auto generating one"}
-   "cat" {:kind :flag
-          :short "c"
-          :help "do not edit selected file, just print it to stdout"}
-   "verbose" {:kind :flag
-              :short "v"
-              :action (fn [] (setdyn :verbose true) (print "Verbose Mode enabled!")) # TODO use verbose flag in other funcs
-              :help "more verbose logging"}
-   :default {:kind :accumulate
-             :help positional-args-help-string}))
+  (case (first args)
+    "shell" (do (shell (os/cwd) (slice args 1 -1)) (os/exit 0))
+    "git" (os/exit (os/execute ["git" ;(slice args 1 -1)] :p)))
+  (def res (options/parse
+    :args args
+    :description `A simple local cli wiki using git for synchronization
+                 for help with commands use --command_help`
+    :options {"command_help" {:kind :flag
+                              :short "ch"
+                              :help "Prints command help"}
+              "no_commit" {:kind :flag
+                           :short "nc"
+                           :help "Do not commit changes"}
+              "no_sync" {:kind :flag
+                         :short "ns"
+                         :help "Do not automatically sync repo in background (does not apply to manual sync). This is enabled by default if $WIKI_NO_SYNC is set to \"true\""}
+              "force" {:kind :flag
+                       :short "f"
+                       :help "foce selected operation, works for rm & mv"}
+              "no_pull" {:kind :flag
+                         :short "np"
+                         :help "do not pull from repo"}
+              "ask-commit-message" {:kind :flag
+                                    :short "ac"
+                                    :help "ask for the commit message instead of auto generating one"}
+              "cat" {:kind :flag
+                     :short "c"
+                     :help "do not edit selected file, just print it to stdout"}
+              "verbose" {:kind :flag
+                         :short "v"
+                         :action (fn [] (setdyn :verbose true) (print "Verbose Mode enabled!")) # TODO use verbose flag in other funcs
+                         :help "more verbose logging"}
+              :default {:kind :accumulate
+                        :help positional-args-help-string}}))
   (unless res (os/exit 1)) # exit with error if the arguments cannot be parsed
   (if (res "command_help") (do (print positional-args-help-string) (os/exit 0)))
   (def args (res :default))
@@ -409,5 +411,5 @@
     nil (edit/interactive config)
     _ (print "Invalid syntax!")))
 
-(defn main [&]
-  (cli))
+(defn main [myself & args]
+  (cli args))
