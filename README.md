@@ -1,25 +1,16 @@
 # Glyph
 > NOTICE: This tool is in a very early alpha state and is still being designed.
 
-Glyph is commandline tool that manages a "personal archive" for you. This personal archive is a git repository which holds your data and can also define modules that glyph loads and integrates. There are a few default modules that are always active.  
-The default wiki module of this application is kind of a commandline equivalent of Obsidian or can also be seen as a wrapper for other wiki helpers like vimwiki and uses git for syncing of different machines as well as versioning of the documents.  
+Glyph is commandline tool that manages a "personal archive" for you. This personal archive is a git repository which holds your data and can also define modules that glyph loads and integrates. A few examples for such modules can be found in the examples directory.  
+The integrated wiki module helps you in managing a markdown-based personal knowledge base and is designed to be used with a commandline editor like vim (the author uses neovim in combination with vimwiki).  
 
 ## Modules
-In the future the wiki will be one of multiple (optional) modules including:  
-- config managment
-- device crypto-key managment
-- the wiki itself
-- timers
-- many more
-
-## Roadmap
-Following features are also on the roadmap:
-- neovim plugin for tighter integration
-- termux integration with automated setup script for android support
+Modules are simple scripts implemented in a git submodule. To keep the setup simple and avoid a hard requirement on glyph, they are implemented as a simple script called `.main` that is executed from the root of the module repository. These scripts implement all the functionality to interact with the module and thus can be used independently from git.
 
 ## Future Ideas
 And these features are currently in discussion and may be implmeneted:
 - embedded editor
+- vim plugin
 
 ## Documentation
 Large parts of glyph are self documenting via the cli and --help flags, following things should be noted:  
