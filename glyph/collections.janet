@@ -2,6 +2,7 @@
 (import ./git)
 (import spork/misc)
 (import spork/path)
+(import spork/json)
 (import ./scripts)
 (import ./util)
 
@@ -23,11 +24,13 @@
 (defn collections/get [name]
   # this, collections/init and collections/deinit are the only parts of the collections integration that have a hard dependency on git worktrees
   # if normal repos are to be used in the future modify these two functions
-  (def collection (config/get (string "collections/" name)))
-  (def cached (first (filter |(= ($0 :branch) (string "refs/heads/" name)) (git/worktree/list (util/arch-dir)))))
-  (def metadata @{:cached (if cached true false)})
-  (if (metadata :cached) (merge-into metadata cached))
-  (merge collection metadata))
+  (label result
+    (def collection (config/get (string "collections/" name)))
+    (unless collection (return result nil))
+    (def cached (first (filter |(= ($0 :branch) (string "refs/heads/" name)) (git/worktree/list (util/arch-dir)))))
+    (def metadata @{:cached (if cached true false)})
+    (if (metadata :cached) (merge-into metadata cached))
+    (return result (merge collection metadata))))
 
 (defn collections/init [name path]
   (def collection (collections/get name))
@@ -50,7 +53,7 @@
 (defn collections/execute [name args]
   (def arch-dir (util/arch-dir))
   (def collection (collections/get name))
-  (if (collection :cached)
+  (if (and collection (collection :cached))
     (do (def prev-dir (os/cwd))
         (defer (os/cd prev-dir)
           (os/cd (collection :path))
@@ -62,5 +65,10 @@
       (error (string "neither a collection nor a user script called " name " exists")))))
 
 (defn collections/sync []
-  (each collection (filter |((collections/get $0) :cached) (collections/ls))
-    (collections/execute collection ["sync"])))
+  (each collection (filter |($0 :cached) (map |(merge (collections/get $0) {:name $0}) (collections/ls)))
+    (def info-path (path/join (collection :path) ".main.info.json"))
+    (if (os/stat info-path)
+        (do (def info (json/decode (slurp info-path)))
+            (if (index-of "sync" (info "supported"))
+                (do (print "Starting additional sync for  " (collection :name))
+                    (collections/execute (collection :name) ["sync"])))))))

@@ -177,6 +177,20 @@
 
 (defn worktree/list [dir] (peg/match worktree-list-pattern (exec-slurp dir "worktree" "list" "--porcelain" "-z")))
 
+(def- branch-status-patt (peg/compile
+  ~{:line (replace
+            (* (capture (to "\0")) "\0" (capture (+ ">" "<" "<>" "=")) "\0" (opt "\n"))
+            ,|(case $1
+              ">" {:ref $0 :status :ahead}
+              "<" {:ref $0 :status :behind}
+              "<>" {:ref $0 :status :both}
+              "=" {:ref $0 :status :up-to-date}
+              (error (string "did not expect " $1 " as %{upstream:trackshort} in for-each-ref message"))))
+    :main (some :line)}))
+
+(defn refs/status [dir]
+  (peg/match branch-status-patt (exec-slurp dir "for-each-ref" "--format=%(refname:short)%00%(upstream:trackshort)%00" "refs/heads")))
+
 (defn default-branch
   "get the default branch of optional remote"
   [dir &named remote]
