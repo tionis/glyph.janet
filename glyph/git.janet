@@ -167,6 +167,16 @@
       (each path paths
         (submodules/update/set path value :show-message show-message)))))
 
+(def- worktree-list-pattern
+  (peg/compile ~{:item (replace (* "worktree "
+                                   (capture (to "\0")) "\0HEAD "
+                                   (capture (to "\0")) "\0branch "
+                                   (capture (to "\0\0")) "\0\0")
+                                ,|{:path $0 :head $1 :branch $2})
+                 :main (some :item)}))
+
+(defn worktree/list [dir] (peg/match worktree-list-pattern (exec-slurp dir "worktree" "list" "--porcelain" "-z")))
+
 (defn default-branch
   "get the default branch of optional remote"
   [dir &named remote]
