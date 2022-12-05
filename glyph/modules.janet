@@ -1,4 +1,4 @@
-(use ./config)
+(use ./store)
 (import ./git)
 (import spork/misc)
 (import spork/path)
@@ -22,9 +22,12 @@
 
 (defn modules/get [name] (config/get (string "modules/" name)))
 
-(defn modules/init [name] (git/loud (util/arch-dir) "submodule" "update" "--init" ((modules/get name) :path)))
+(defn modules/init [name] (git/loud (util/arch-dir) "submodule" "update" "--init" ((modules/get name) :path))) # TODO 2.0 clone instead
+# TODO 2.0 important: add module to cache
 
-(defn modules/execute [name args]
+# TODO 2.0 add cache auto update
+
+(defn modules/execute [name args] # TODO 2.0 no auto commit
   (def arch-dir (util/arch-dir))
   (git/pull arch-dir :background true)
   (def module (modules/get name))

@@ -3,7 +3,7 @@
 (import ./daemon)
 
 (defn exec-slurp
-  "given a config and some arguments execute the git subcommand on wiki"
+  "given a git dir and some arguments execute the git subcommand on wiki"
   [dir & args]
   (sh/exec-slurp "git" "-C" dir ;args))
 
@@ -26,7 +26,7 @@
   (peg/compile ~(* (opt " ") (capture (between 1 2 (* (not " ") 1))) " " (capture (some 1)))))
 
 (defn changes # TODO migrate to porcelain v2 to detect submodule states https://git-scm.com/docs/git-status#_changed_tracked_entries
-  "give a config get the changes in the working tree of the git repo"
+  "given a git dir get the changes in the working tree of the git repo"
   [git-repo-dir]
   (def changes @[])
   (each line (string/split "\n" (exec-slurp git-repo-dir "status" "--porcelain=v1"))
@@ -69,6 +69,8 @@
   "git pull the specified repo with modifiers"
   [dir &named background silent remote]
   (def args @["pull" "--recurse-submodules=on-demand" "--autostash"])
+  # TODO if pull has merge conflict try resolving merge automatically using
+  # git mergetool --tool=default
   (if remote (array/push args remote))
   (if background
     (do (async dir ;args))

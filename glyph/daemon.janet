@@ -5,7 +5,7 @@
 (defn client [] (rpc/client :unix get-socket-path))
 
 (defn check
-  "check wether a functional daemin is running and return true if it does"
+  "check wether a functional daemon is running and return true if it does"
   []
   (try
     (with [client (client)]

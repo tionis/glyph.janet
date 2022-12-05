@@ -2,6 +2,109 @@
 (import ./options :export true)
 (use spork)
 
+# TODO 2.0 for cosmo integration
+# support a module that has different git dir and working dir
+# add some functionalty to generate a prompt efficiently (maybe integrate cosmo into core?)
+# add sync status management
+# add pre-sync and post-sync hooks?
+# write hosts db script?
+# add setup and node management logic to core config and node management
+# add message management
+# add sigchain
+# add universal vars
+
+
+(defn sync/status []
+  (if (cosmo/sync/enabled?)
+    (os/exit 0)
+    (os/exit 1)))
+
+(defn sync/status/print []
+  (if (cosmo/sync/enabled?)
+    (print "Sync enabled!")
+    (print "Sync disabled!")))
+
+(defn get_prompt []
+  (def sync_status (if (cosmo/sync/enabled?) "" "sync:disabled "))
+  (def changes_array (string/split "\n" ((cosmo/git "status" "--porcelain=v1") :text)))
+  (var changes_count (length changes_array))
+  (if (= changes_count 1) (if (= (changes_array 0) "") (set changes_count 0)))
+  (def changes_status (if (> changes_count 0) (string changes_count " uncommitted changes ")))
+  (prin "\x1b[31m" sync_status changes_status "\x1b[37m")(flush))
+
+(def store/help
+  `Store allows storing objects and strings in the cosmo git repo, available subcommands are:
+    get $KEY - Prints the value for key without extra newline
+    set $KEY $VALUE - Set a key to the given value
+    ls $OPTIONAL_PATTERN - If glob-pattern was given, list all keys matching it, else list all
+    rm $KEY - Delete the key`)
+
+(def store/argparse
+  ["Store allows storing objects and strings in the cosmo git repo"
+   "global" {:kind :flag
+             :short "g"
+             :help "Work on global store, this is the default"}
+   "local" {:kind :flag
+            :short "l"
+            :help "Work on local store"}
+   "groups" {:kind :accumulate
+             :short "t"
+             :help "The groups the secret should be encrypted for (implies --global)"}
+   :default {:kind :accumulate
+             :help store/help}])
+
+(defn print_val [val]
+  (if (or (= (type val) :string) (= (type val) :buffer))
+      (print val)
+      (print (string/format "%j" val))))
+
+(defn store/handler [args]
+  (setdyn :args @[((dyn :args) 0) ;(slice (dyn :args) 2 -1)])
+  (def args (argparse/argparse ;store/argparse))
+  (unless args (os/exit 1))
+  (if (not (args :default))
+    (do (print store/help)
+        (os/exit 0)))
+  # TODO pass --groups to store once encryption support is there
+  (if (args "groups") (put args "global" true))
+  (if (args "global") (put args "local" nil))
+  (case ((args :default) 0)
+    "get" (if (args "local")
+            (do
+              (if (< (length (args :default)) 2) (error "Key to get not specified"))
+              (let [val (cosmo/cache/get ((args :default) 1))]
+                (print_val val)))
+            (do
+              (if (< (length (args :default)) 2) (error "Key to get not specified"))
+              (let [val (cosmo/store/get ((args :default) 1))]
+                (print_val val))))
+    "set" (if (args "local")
+            (do (if (< (length (args :default)) 3) (error "Key or value to set not specified"))
+              (cosmo/cache/set ((args :default) 1) ((args :default) 2))) # TODO 2.0 try parsing the value as JDN?
+            (do (if (< (length (args :default)) 3) (error "Key or value to set not specified"))
+              (cosmo/store/set ((args :default) 1) ((args :default) 2)))) # TODO 2.0 try parsing the value as JDN?
+    "ls"  (if (args "local") # TODO think of better way for passing list to user (human readable key=value but if --json is given print list as json?)
+            (let [patt (if (> (length (args :default)) 1) (string/join (slice (args :default) 1 -1) "/") nil)
+                list (cosmo/cache/ls-contents patt)]
+              (print (string/format "%P" list)))
+            (let [patt (if (> (length (args :default)) 1) (string/join (slice (args :default) 1 -1) "/") nil)
+                list (cosmo/store/ls-contents patt)]
+              (print (string/format "%P" list))))
+    "rm"  (if (args "local")
+            (do (if (< (length (args :default)) 2) (error "Key to delete not specified"))
+              (cosmo/cache/rm ((args :default) 1)))
+            (do (if (< (length (args :default)) 2) (error "Key to delete not specified"))
+              (cosmo/store/rm ((args :default) 1))))
+    (do (eprint "Unknown subcommand")
+        (os/exit 1))))
+
+(def universal-vars/help
+  `Universal vars are environment variables that are sourced at the beginning of a shell session.
+  This allows to have local env-vars that are either machine specific or shared among all.
+  To create an environment variable use the store, all variables are stored under the vars/* prefix
+  Available Subcommands:
+    export $optional_pattern - return the  environment variables matching pattern, all if none is given in a format that can be evaled by posix shells`)
+
 (defn cli/modules/add [args]
   (def res
     (options/parse
@@ -32,6 +135,7 @@
                       "\n")))
 
 (defn cli/modules/rm [name]
+  # TODO 2.0 change to nuke
   (if (not name) (do (print "Specify module to remove!") (os/exit 1)))
   (def module (modules/get name))
   (if (not module) (do (print "Module " name " not found, aborting...") (os/exit 1)))
@@ -50,18 +154,87 @@
            help - show this help`))
 
 (defn cli/modules/init [name]
+  # TODO 2.0 just call modules/init
   (if (not name) (do (print "Specify module to initialize by name, aborting...") (os/exit 1)))
   (def module-conf (modules/get name))
   (if (not module-conf) (do (print "Module " name " not found, aborting...") (os/exit 1)))
   (modules/init name))
 
 (defn cli/modules/deinit [name]
+  # TODO 2.0 just call modules/deinit
   (def arch-dir (util/arch-dir))
   (if (not name) (do (print "Specify module to initialize by name, aborting...") (os/exit 1)))
   (def module-conf (modules/get name))
   (if (not module-conf) (do (print "Module " name " not found, aborting...") (os/exit 1)))
   (git/loud arch-dir "submodule" "deinit" "-f" (module-conf :path))
   (sh/rm (path/join arch-dir ".git" "modules" (module-conf :path))))
+
+
+(def store/help
+  `Store allows storing objects and strings in the cosmo git repo, available subcommands are:
+    get $KEY - Prints the value for key without extra newline
+    set $KEY $VALUE - Set a key to the given value
+    ls $OPTIONAL_PATTERN - If glob-pattern was given, list all keys matching it, else list all
+    rm $KEY - Delete the key`)
+
+(def store/argparse
+  ["Store allows storing objects and strings in the cosmo git repo"
+   "global" {:kind :flag
+             :short "g"
+             :help "Work on global store, this is the default"}
+   "local" {:kind :flag
+            :short "l"
+            :help "Work on local store"}
+   "groups" {:kind :accumulate
+             :short "t"
+             :help "The groups the secret should be encrypted for (implies --global)"}
+   :default {:kind :accumulate
+             :help store/help}])
+
+(defn print_val [val]
+  (if (or (= (type val) :string) (= (type val) :buffer))
+      (print val)
+      (print (string/format "%j" val))))
+
+(defn store/handler [args]
+  (setdyn :args @[((dyn :args) 0) ;(slice (dyn :args) 2 -1)])
+  (def args (argparse/argparse ;store/argparse))
+  (unless args (os/exit 1))
+  (if (not (args :default))
+    (do (print store/help)
+        (os/exit 0)))
+  # TODO pass --groups to store once encryption support is there
+  (if (args "groups") (put args "global" true))
+  (if (args "global") (put args "local" nil))
+  (case ((args :default) 0)
+    "get" (if (args "local")
+            (do
+              (if (< (length (args :default)) 2) (error "Key to get not specified"))
+              (let [val (cosmo/cache/get ((args :default) 1))]
+                (print_val val)))
+            (do
+              (if (< (length (args :default)) 2) (error "Key to get not specified"))
+              (let [val (cosmo/store/get ((args :default) 1))]
+                (print_val val))))
+    "set" (if (args "local")
+            (do (if (< (length (args :default)) 3) (error "Key or value to set not specified"))
+              (cosmo/cache/set ((args :default) 1) ((args :default) 2)))
+            (do (if (< (length (args :default)) 3) (error "Key or value to set not specified"))
+              (cosmo/store/set ((args :default) 1) ((args :default) 2))))
+    "ls"  (if (args "local") # TODO think of better way for passing list to user (human readable key=value but if --json is given print list as json?)
+            (let [patt (if (> (length (args :default)) 1) (string/join (slice (args :default) 1 -1) "/") nil)
+                list (cosmo/cache/ls-contents patt)]
+              (print (string/format "%P" list)))
+            (let [patt (if (> (length (args :default)) 1) (string/join (slice (args :default) 1 -1) "/") nil)
+                list (cosmo/store/ls-contents patt)]
+              (print (string/format "%P" list))))
+    "rm"  (if (args "local")
+            (do (if (< (length (args :default)) 2) (error "Key to delete not specified"))
+              (cosmo/cache/rm ((args :default) 1)))
+            (do (if (< (length (args :default)) 2) (error "Key to delete not specified"))
+              (cosmo/store/rm ((args :default) 1))))
+    (do (eprint "Unknown subcommand")
+        (os/exit 1))))
 
 (defn cli/setup/modules [args]
   (error "Not implemented yet")) # TODO implement modules setup using jeff multi select
@@ -126,7 +299,7 @@
 
 (defn cli/sync [args] (sync))
 
-(defn cli/tools/ensure-pull-merges-submodules
+(defn cli/tools/ensure-pull-merges-submodules # TODO 2.0 remove?
   []
   (git/submodules/update/set (util/arch-dir) "merge" :show-message true :recursive true))
 
@@ -158,6 +331,7 @@
     (os/exit 1))
   (setdyn :arch-dir arch-dir)
   (case (first args)
+    # TODO 2.0 add store command (or both a config and a cache command? steal code from cosmo)
     "setup" (cli/setup (slice args 1 -1))
     "modules" (cli/modules (slice args 1 -1))
     "scripts" (cli/scripts (slice args 1 -1))
