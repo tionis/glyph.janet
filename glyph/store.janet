@@ -33,7 +33,8 @@
       (unless no-git
         (git/loud arch-dir "reset")
         (git/loud arch-dir "add" "-f" path)
-        (git/loud arch-dir "commit" "-m" commit-message)))
+        (git/loud arch-dir "commit" "-m" commit-message)
+        (git/async arch-dir "push")))
     (do
       (create_dirs_if_not_exists (path/join base-dir (path/dirname formatted-key)))
       (default commit-message (string "config: set " key " to " value))
@@ -41,7 +42,8 @@
       (unless no-git
         (git/loud arch-dir "reset")
         (git/loud arch-dir "add" "-f" path)
-        (git/loud arch-dir "commit" "-m" commit-message)))))
+        (git/loud arch-dir "commit" "-m" commit-message)
+        (git/async arch-dir "push")))))
 
 (defn- generic/ls [base-dir glob-pattern]
   (create_dirs_if_not_exists base-dir)

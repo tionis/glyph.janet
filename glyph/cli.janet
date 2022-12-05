@@ -162,7 +162,7 @@
 (defn cli/setup/collections [args]
   (error "Not implemented yet")) # TODO implement collections setup using jeff + interactive wizard
 
-(defn cli/setup/help [args]
+(defn cli/setup/help []
   (print `To setup your own glyph archive you just need to do following things:
            1. create a directory at ${GLYPH_DIR:-~/.glyph}
            2. use glyph git init to initialize the git repo
@@ -180,13 +180,13 @@
   (case (first args)
     "collections" (cli/setup/collections (slice args 1 -1))
     "clone" (cli/setup/clone (slice args 1 -1))
-    "help" (cli/setup/help (slice args 1 -1))
-    (cli/setup/help (slice args 1 -1))))
+    "help" (cli/setup/help)
+    (cli/setup/help)))
 
 (defn cli/collections [args]
   (case (first args)
     "add" (cli/collections/add (slice args 1 -1))
-    "init" (cli/collections/init (get args 1 -1))
+    "init" (cli/collections/init (slice args 1 -1))
     "deinit" (cli/collections/deinit (get args 1 nil))
     "ls" (cli/collections/ls (get args 1 nil))
     "nuke" (cli/collections/nuke (get args 1 nil))
@@ -241,12 +241,14 @@
 
 (defn main [myself & args]
   (def arch-dir (util/get-arch-dir))
-  (unless (let [stat (os/stat arch-dir)] (and stat (= (stat :mode) :directory)))
-    (eprint "Arch dir does not exist, please initialize it first!")
-    (print "Short setup description:")
-    (cli/setup/help [])
-    (print "For more information please refer to the glyph documentation")
-    (os/exit 1))
+  (if (and (not (let [stat (os/stat arch-dir)] (and stat (= (stat :mode) :directory))))
+           (not= (first args) "setup"))
+    (do
+      (eprint "Arch dir does not exist, please initialize it first!")
+      (print "Short setup description:")
+      (cli/setup/help)
+      (print "For more information please refer to the glyph documentation")
+      (os/exit 1)))
   (setdyn :arch-dir arch-dir)
   (case (first args)
     "setup" (cli/setup (slice args 1 -1))

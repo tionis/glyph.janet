@@ -140,7 +140,7 @@
   (ev/gather
     (:read out :all out-buf)
     (:read err :all err-buf) # TODO this doesn't work
-    (pp (:wait proc)))
+    (:wait proc))
   {:out (string/trimr out-buf) :err (string/trimr err-buf) :code 0})
 
 (defn remote/url/get-owner-repo-string

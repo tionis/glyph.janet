@@ -15,5 +15,6 @@
     "search" (cli/search (string/join (slice args 1 -1) ""))
     "studip" (nested-module "studip" (slice args 1 -1))
     "shell" (shell (os/cwd) (slice args 1 -1))
+    "sync" (generic/sync)
     "help" (cli/help)
     (cli/help)))

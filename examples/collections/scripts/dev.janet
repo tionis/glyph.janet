@@ -1,5 +1,6 @@
 #!/bin/env janet
 (use spork)
+(use glyph/helpers)
 (import glyph/git)
 (import jeff)
 
@@ -78,6 +79,7 @@
     ["add" remote name] (cli/add remote name)
     ["add" remote] (cli/add remote)
     ["help"] (cli/help)
+    ["sync"] (generic/sync)
     ["ls" & patterns] (cli/ls patterns)
     ["shell" path] (cli/shell path)
     ["shell"] (cli/shell nil)

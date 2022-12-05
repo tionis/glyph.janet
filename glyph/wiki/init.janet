@@ -392,7 +392,7 @@
       (if (os/getenv "EDITOR")
           (put config :editor (os/getenv "EDITOR"))
           (put config :editor "vim"))) # fallback to default editor
-  (if (config :sync)
+  (if (and (config :sync) (not= (first args) "sync"))
       (if (and (not (res "no_pull"))
                (not (= args @["sync"]))) # ensure pull is not executed two times for manual sync
           (git/pull (config :wiki-dir) :background true)))

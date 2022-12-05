@@ -37,8 +37,8 @@
     (git/exec-slurp arch-dir "remote" "add" name (collection :remote))
     ([err] (if (not= (git/exec-slurp arch-dir "remote" "get-url" name) (collection :remote))
              (error "remote with same name as collection already exists"))))
-  (git/loud arch-dir "fetch" name)
-  (git/loud arch-dir "branch" (string "--set-upstream-to=" name (collection :remote-branch)) name)
+  (git/loud arch-dir "fetch" name (string (collection :remote-branch) ":" name))
+  (git/loud arch-dir "branch" (string "--set-upstream-to=" name "/" (collection :remote-branch)) name)
   (git/loud arch-dir "worktree" "add" path name))
 
 (defn collections/deinit [name]
@@ -62,5 +62,5 @@
       (error (string "neither a collection nor a user script called " name " exists")))))
 
 (defn collections/sync []
-  (each collection (filter |((collections/get $0) :cached) collections/ls)
-    (collections/execute collection "sync")))
+  (each collection (filter |((collections/get $0) :cached) (collections/ls))
+    (collections/execute collection ["sync"])))

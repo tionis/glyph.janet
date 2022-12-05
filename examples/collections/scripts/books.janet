@@ -16,6 +16,7 @@
   (case (first args)
     "search" (cli/search (string/join (slice args 1 -1) ""))
     "shell" (shell (os/cwd) (slice args 1 -1))
+    "sync" (generic/sync)
     "calibre" (shell (os/cwd) (slice args 1 -1)
                      :commit-in-submodules true
                      :command  "calibre \"--with-library=$(pwd)\""

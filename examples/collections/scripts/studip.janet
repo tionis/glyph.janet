@@ -118,7 +118,8 @@
 
   (case (first args)
     "select-semester" (select-semester studip-dir config)
-    "sync" (sync studip-dir (config :semester-id))
+    "update" (sync studip-dir (config :semester-id))
+    "sync" (generic/sync)
     "shell" (shell studip-dir (slice args 1 -1))
     nil (help)
     "help" (help)
