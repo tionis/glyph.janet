@@ -2,65 +2,54 @@
 (import ./options :export true)
 (use spork)
 
-# TODO 2.0 for cosmo integration
-# support a module that has different git dir and working dir
+# TODO for cosmo integration
+# support a collection that has different git dir and working dir
 # add some functionalty to generate a prompt efficiently (maybe integrate cosmo into core?)
 # add sync status management
 # add pre-sync and post-sync hooks?
-# write hosts db script?
+# write hosts db script? (just implement as script?)
 # add setup and node management logic to core config and node management
-# add message management
+# add message management (just implement as script?)
 # add sigchain
 # add universal vars
+# (defn sync/status []
+#   (if (cosmo/sync/enabled?)
+#     (os/exit 0)
+#     (os/exit 1)))
+# TODO add sync management
+# (defn sync/status/print []
+#   (if (cosmo/sync/enabled?)
+#     (print "Sync enabled!")
+#     (print "Sync disabled!")))
 
-
-(defn sync/status []
-  (if (cosmo/sync/enabled?)
-    (os/exit 0)
-    (os/exit 1)))
-
-(defn sync/status/print []
-  (if (cosmo/sync/enabled?)
-    (print "Sync enabled!")
-    (print "Sync disabled!")))
-
-(defn get_prompt []
-  (def sync_status (if (cosmo/sync/enabled?) "" "sync:disabled "))
-  (def changes_array (string/split "\n" ((cosmo/git "status" "--porcelain=v1") :text)))
-  (var changes_count (length changes_array))
-  (if (= changes_count 1) (if (= (changes_array 0) "") (set changes_count 0)))
-  (def changes_status (if (> changes_count 0) (string changes_count " uncommitted changes ")))
-  (prin "\x1b[31m" sync_status changes_status "\x1b[37m")(flush))
-
-(def store/help
+(def cli/store/help
   `Store allows storing objects and strings in the cosmo git repo, available subcommands are:
     get $KEY - Prints the value for key without extra newline
     set $KEY $VALUE - Set a key to the given value
     ls $OPTIONAL_PATTERN - If glob-pattern was given, list all keys matching it, else list all
     rm $KEY - Delete the key`)
 
-(def store/argparse
-  ["Store allows storing objects and strings in the cosmo git repo"
-   "global" {:kind :flag
-             :short "g"
-             :help "Work on global store, this is the default"}
-   "local" {:kind :flag
-            :short "l"
-            :help "Work on local store"}
-   "groups" {:kind :accumulate
-             :short "t"
-             :help "The groups the secret should be encrypted for (implies --global)"}
-   :default {:kind :accumulate
-             :help store/help}])
-
 (defn print_val [val]
-  (if (or (= (type val) :string) (= (type val) :buffer))
-      (print val)
-      (print (string/format "%j" val))))
+  (case (type val)
+    :string (print val)
+    :buffer (print val)
+    (print (string/format "%j" val))))
 
-(defn store/handler [args]
-  (setdyn :args @[((dyn :args) 0) ;(slice (dyn :args) 2 -1)])
-  (def args (argparse/argparse ;store/argparse))
+(defn cli/store/handler [raw-args]
+  (def args (options/parse
+    :description "Store allows storing objects and strings in the cosmo git repo"
+    :options {"global" {:kind :flag
+                        :short "g"
+                        :help "Work on global store, this is the default"}
+             "local" {:kind :flag
+                      :short "l"
+                      :help "Work on local store"}
+             "groups" {:kind :accumulate
+                       :short "t"
+                       :help "The groups the secret should be encrypted for (implies --global)"}
+             :default {:kind :accumulate
+                       :help store/help}}
+     :args ["glyph" ;raw-args]))
   (unless args (os/exit 1))
   (if (not (args :default))
     (do (print store/help)
@@ -78,11 +67,11 @@
               (if (< (length (args :default)) 2) (error "Key to get not specified"))
               (let [val (cosmo/store/get ((args :default) 1))]
                 (print_val val))))
-    "set" (if (args "local")
-            (do (if (< (length (args :default)) 3) (error "Key or value to set not specified"))
-              (cosmo/cache/set ((args :default) 1) ((args :default) 2))) # TODO 2.0 try parsing the value as JDN?
-            (do (if (< (length (args :default)) 3) (error "Key or value to set not specified"))
-              (cosmo/store/set ((args :default) 1) ((args :default) 2)))) # TODO 2.0 try parsing the value as JDN?
+    "set" (do (if (< (length (args :default)) 3) (error "Key or value to set not specified"))
+              (def val (parse ((args :default) 2)))
+              (if (args "local")
+                (cosmo/cache/set ((args :default) 1) val)
+                (cosmo/store/set ((args :default) 1) val)))
     "ls"  (if (args "local") # TODO think of better way for passing list to user (human readable key=value but if --json is given print list as json?)
             (let [patt (if (> (length (args :default)) 1) (string/join (slice (args :default) 1 -1) "/") nil)
                 list (cosmo/cache/ls-contents patt)]
@@ -105,69 +94,69 @@
   Available Subcommands:
     export $optional_pattern - return the  environment variables matching pattern, all if none is given in a format that can be evaled by posix shells`)
 
-(defn cli/modules/add [args]
+(defn cli/collections/add [args]
   (def res
     (options/parse
-      :description "Add a new module to the glyph archive"
+      :description "Add a new collection to the glyph archive"
       :options {"name" {:kind :option
                         :required true
                         :short "n"
-                        :help "the name of the new module"}
-                "path" {:kind :option
-                        :required true
-                        :short "p"
-                        :help "the path of the new module, must be a relative path from the arch_dir root"}
+                        :help "the name of the new collection"}
+                "remote" {:kind :option
+                          :required true
+                          :short "r"
+                          :help "git remote url of the new collection"}
                 "description" {:kind :option
                                :required true
                                :short "d"
-                               :help "the description of the new module"}}
+                               :help "the description of the new collection"}}
       :args ["glyph" ;args]))
   (unless res (os/exit 1))
-  (modules/add (res "name") (res "path") (res "description"))
-  (print `module was added to index. You can now add a .main script and manage it via git.
-         For examples for .main script check the glyph main repo at https://tasadar.net/tionis/glyph
-         If this glyph module uses a git submodule ensure that the git module update and branch are set 
-         these .gitmodule options ensure the gitmodules are handled correctly by all glyph functions`))
+  (collections/add (res "name") (res "description") (res "remote"))
+  (print "Collection was recorded in config, you can now initialize it using glyph collections init `" (res "name") "`"))
 
-(defn cli/modules/ls [&opt args]
-  (print (string/join (map |(string $0 " - " ((modules/get $0) :description))
-                           (modules/ls (first args)))
-                      "\n")))
+(defn cli/collections/ls [&opt args]
+  (print
+    (string/join
+      (map (fn [name]
+             (def collection (collections/get name))
+             (string name " - " (collection :description)
+                     (if (collection :cached)
+                         (string " @ " (collection :path)))))
+           (collections/ls (if args (first args) nil)))
+    "\n")))
 
-(defn cli/modules/rm [name]
-  # TODO 2.0 change to nuke
-  (if (not name) (do (print "Specify module to remove!") (os/exit 1)))
-  (def module (modules/get name))
-  (if (not module) (do (print "Module " name " not found, aborting...") (os/exit 1)))
-  (git/loud (util/arch-dir) "submodule" "deinit" "-f" (module :path))
-  (sh/rm (path/join (util/arch-dir) ".git" "modules" (module :path)))
-  (modules/rm name)
-  (print "module " name " was deleted"))
+(defn cli/collections/nuke [name]
+  (if (not name) (do (print "Specify collection to remove!") (os/exit 1)))
+  (def collection (collections/get name))
+  (if (not collection) (do (print "Collection " name " not found, aborting...") (os/exit 1)))
+  (collections/deinit name)
+  (collections/nuke name)
+  (collections/gc)
+  (print "collection " name " was deleted"))
 
-(defn cli/modules/help []
+(defn cli/collections/help []
   (print `Available Subcommands:
-           add - add a new module
-           ls - list modules
-           rm - remove a module
-           init - initialize an existing module
-           deinit - deinitialize and existing module
+           add - add a new collection
+           ls - list collections
+           rm - remove a collection
+           init - initialize an existing collection
+           deinit - deinitialize a cached collection
            help - show this help`))
 
-(defn cli/modules/init [name]
-  # TODO 2.0 just call modules/init
-  (if (not name) (do (print "Specify module to initialize by name, aborting...") (os/exit 1)))
-  (def module-conf (modules/get name))
-  (if (not module-conf) (do (print "Module " name " not found, aborting...") (os/exit 1)))
-  (modules/init name))
+(defn cli/collections/init [name]
+  (if (or (not name) (= name "")) (do (print "Specify collection to initialize by name, aborting...") (os/exit 1)))
+  (def collection (collections/get name))
+  (if (not collection) (error (string "Collection " name " not found, aborting...")))
+  (if (collection :cached) (error (string "Collection" name " already initialized")))
+  (collections/init name))
 
-(defn cli/modules/deinit [name]
-  # TODO 2.0 just call modules/deinit
+(defn cli/collections/deinit [name]
   (def arch-dir (util/arch-dir))
-  (if (not name) (do (print "Specify module to initialize by name, aborting...") (os/exit 1)))
-  (def module-conf (modules/get name))
-  (if (not module-conf) (do (print "Module " name " not found, aborting...") (os/exit 1)))
-  (git/loud arch-dir "submodule" "deinit" "-f" (module-conf :path))
-  (sh/rm (path/join arch-dir ".git" "modules" (module-conf :path))))
+  (if (not name) (do (print "Specify collection to deinitialize by name, aborting...") (os/exit 1)))
+  (def collection (collection/get name))
+  (if (or (not collection) (not (collection :cached))) (do (print "Collection " name " not found, aborting...") (os/exit 1)))
+  (collections/deinit name))
 
 
 (def store/help
@@ -236,35 +225,36 @@
     (do (eprint "Unknown subcommand")
         (os/exit 1))))
 
-(defn cli/setup/modules [args]
-  (error "Not implemented yet")) # TODO implement modules setup using jeff multi select
+(defn cli/setup/collections [args]
+  (error "Not implemented yet")) # TODO implement collections setup using jeff + interactive wizard
 
 (defn cli/setup/help [args]
   (print `To setup your own glyph archive you just need to do following things:
-           1. create a directory at $GLYPH_ARCH_DIR
+           1. create a directory at ${GLYPH_DIR:-~/.glyph}
            2. use glyph git init to initialize the git repo
            3. add a git remote
-           4. add your glyph modules with glyph modules add
+           4. add your glyph collections with glyph collections add
            5. profit
          If you already have a glyph repo setup you can simply clone it via git clone.
-         After cloning use glyph setup modules to set up your modules`))
+         After cloning use glyph setup collections to set up your collections`))
 
 (defn cli/setup [args]
   (case (first args)
-    "modules" (cli/setup/modules (slice args 1 -1))
+    "collections" (cli/setup/collections (slice args 1 -1))
+    "clone" (cli/setup/clone)
     "help" (cli/setup/help (slice args 1 -1))
     (cli/setup/help (slice args 1 -1))))
 
-(defn cli/modules [args]
+(defn cli/collections [args]
   (case (first args)
-    "add" (cli/modules/add (slice args 1 -1))
-    "init" (cli/modules/init (get args 1 nil))
-    "deinit" (cli/modules/deinit (get args 1 nil))
-    "ls" (cli/modules/ls (get args 1 nil))
-    "rm" (cli/modules/rm (get args 1 nil))
-    "help" (cli/modules/help)
-    nil (cli/modules/ls)
-    (modules/execute (first args) (slice args 1 -1))))
+    "add" (cli/collections/add (slice args 1 -1))
+    "init" (cli/collections/init (get args 1 nil))
+    "deinit" (cli/collections/deinit (get args 1 nil))
+    "ls" (cli/collections/ls (get args 1 nil))
+    "nuke" (cli/collections/nuke (get args 1 nil))
+    "help" (cli/collections/help)
+    nil (cli/collections/ls)
+    (collections/execute (first args) (slice args 1 -1))))
 
 (defn cli/daemon/sync [args]
   (case (first args)
@@ -293,33 +283,23 @@
              ensure - ensure the daemon is running
              status - query the status of the daemon`)))
 
-(defn cli/scripts [args] (print "To add user scripts just add them in the .scripts directory"))
-
-(defn cli/fsck [args] (fsck))
-
-(defn cli/sync [args] (sync))
-
-(defn cli/tools/ensure-pull-merges-submodules # TODO 2.0 remove?
-  []
-  (git/submodules/update/set (util/arch-dir) "merge" :show-message true :recursive true))
-
 (defn cli/tools [args]
   (case (first args)
-    "ensure-pull-merges-submodules" (cli/tools/ensure-pull-merges-submodules)
+    "ensure-pull-merges-submodules" (git/submodules/update/set (util/arch-dir) "merge" :show-message true :recursive true)
     (print `Unknown command! Available commands:
-             ensure-pull-merges-submodules - ensure that new commits in submodules are merged in rather than checked out via the submodule.NAME.update git config option. this is done recursively.`)))
+             ensure-pull-merges-submodules - ensure that new commits in submodules are merged in rather than checked out via the submodule.$NAME.update git config option. this is done recursively.`)))
 
 (defn print-root-help []
   (def preinstalled `Available Subcommands:
-                      modules - manage your custom modules, use 'glyph modules help' for more information
+                      collections - manage your custom collections, use 'glyph collections help' for more information
                       scripts - manage your user scripts
                       git - execute git command on the arch repo
                       sync - sync the glyph archive
                       fsck - perform a filesystem check of arch repo
                       help - print this help`)
-  (def modules (map |(string "  " $0 " - " ((modules/get $0) :description)) (modules/ls)))
+  (def collections (map |(string "  " $0 " - " ((collections/get $0) :description)) (collections/ls)))
   (def scripts (map |(string "  " $0 " - user script") (scripts/ls)))
-  (print (string/join (array/concat @[preinstalled] modules scripts) "\n")))
+  (print (string/join (array/concat @[preinstalled] collections scripts) "\n")))
 
 (defn main [myself & args]
   (def arch-dir (util/get-arch-dir))
@@ -331,17 +311,18 @@
     (os/exit 1))
   (setdyn :arch-dir arch-dir)
   (case (first args)
-    # TODO 2.0 add store command (or both a config and a cache command? steal code from cosmo)
     "setup" (cli/setup (slice args 1 -1))
-    "modules" (cli/modules (slice args 1 -1))
-    "scripts" (cli/scripts (slice args 1 -1))
+    "store" (cli/store (slcie args 1 -1))
+    "status" (git/loud arch-dir "for-each-ref" "--format=%(refname:short) %(upstream:track) %(upstream:remotename)" "refs/heads")
+    "collections" (cli/collections (slice args 1 -1))
+    "scripts" (print "To add user scripts just add them in the $GLYPH_DIR/scripts directory")
     "daemon" (cli/daemon (slice args 1 -1))
     "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice args 1 -1)] :p))
-    "fsck" (cli/fsck (slice args 1 -1))
-    "sync" (cli/sync (slice args 1 -1))
+    "fsck" (fsck)
+    "sync" (sync)
     "tools" (cli/tools (slice args 1 -1))
     "help" (print-root-help)
     "--help" (print-root-help)
     "-h" (print-root-help)
     nil (print-root-help)
-    (modules/execute (first args) (slice args 1 -1))))
+    (collections/execute (first args) (slice args 1 -1))))

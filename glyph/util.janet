@@ -26,10 +26,10 @@
                userprofile))
       p))
 
-(defn get-default-arch-dir [] (path/join (home) "arch"))
+(defn get-default-arch-dir [] (path/join (home) ".glyph"))
 
 (defn get-arch-dir []
-  (or (os/getenv "GLYPH_ARCH_DIR")
+  (or (os/getenv "GLYPH_DIR")
       (get-default-arch-dir)))
 
 (defn arch-dir []

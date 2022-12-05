@@ -62,14 +62,14 @@
     (put ret item (generic/get base-dir item)))
   ret)
 
-(defn- get-config-dir [] (path/join (util/arch-dir) ".glyph"))
+(defn- get-config-dir [] (path/join (util/arch-dir) "config"))
 (defn config/get [key] (generic/get (get-config-dir) key))
 (defn config/set [key value &named commit-message] (generic/set (get-config-dir) key value :commit-message commit-message))
 (defn config/ls [glob-pattern] (generic/ls (get-config-dir) glob-pattern))
 (defn config/rm [key] (config/set key nil))
 (defn config/ls-contents [glob-pattern] (generic/ls-contents (get-config-dir) glob-pattern))
 
-(defn- get-cache-dir [] (path/join (util/arch-dir) ".git/glyph"))
+(defn- get-cache-dir [] (path/join (util/arch-dir) ".git/glyph/cache"))
 (defn cache/get [key] (generic/get (get-cache-dir) key))
 (defn cache/set [key value &named commit-message] (generic/set (get-cache-dir) key value :no-git true :commit-message commit-message))
 (defn cache/ls [glob-pattern] (generic/ls (get-cache-dir) glob-pattern))
