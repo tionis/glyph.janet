@@ -48,7 +48,7 @@
 (defn collections/deinit [name]
   (def collection (collections/get name))
   (unless (collection :cached) (error "collection not initialized"))
-  (git/loud (util/arch-dir) "worktree" "rm" (collection :path))
+  (git/loud (util/arch-dir) "worktree" "remove" (collection :path))
   (print "Collection deinitialized")) # TODO add note about deleting it and reclaiming disk space with git lfs prune/git gc deleting branch etc. (maybe add collections/gc?)
 
 (defn collections/execute [name args]
