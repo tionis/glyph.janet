@@ -18,7 +18,7 @@
     (if (scripts-result :error)
       (error (string/format "%j" scripts-result))))
   (git/loud (util/arch-dir) "fetch" "--all" "--jobs" (string (length (string/split "\n" (git/exec-slurp (util/arch-dir) "remote")))))
-  (each ref (git/refs/status (util/arch-dir))
+  (each ref (git/refs/status/short (util/arch-dir))
     (case (ref :status)
       :both (do (def path ((collections/get (ref :ref)) :path))
                 (git/pull path)
