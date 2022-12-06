@@ -11,6 +11,10 @@
 ### Legacy Support ###
 (defn modules/execute [name args] (collections/execute name args))
 
+(defn- get-ref-path [ref]
+  (def collection (collections/get (ref :ref)))
+  (if collection (collection :path) (util/arch-dir)))
+
 (defn sync
   "synchronize glyph archive"
   []
@@ -20,11 +24,11 @@
   (git/loud (util/arch-dir) "fetch" "--all" "--jobs" (string (length (string/split "\n" (git/exec-slurp (util/arch-dir) "remote")))))
   (each ref (git/refs/status/short (util/arch-dir))
     (case (ref :status)
-      :both (do (def path ((collections/get (ref :ref)) :path))
+      :both (do (def path (get-ref-path ref))
                 (git/pull path)
                 (git/push path :ensure-pushed true))
-      :ahead (git/push ((collections/get (ref :ref)) :path) :ensure-pushed true)
-      :behind (git/pull ((collections/get (ref :ref)) :path))
+      :ahead (git/push (get-ref-path ref) :ensure-pushed true)
+      :behind (git/pull (get-ref-path ref))
       :up-to-date :noop
       (error "unknown ref status")))
   (collections/sync)
