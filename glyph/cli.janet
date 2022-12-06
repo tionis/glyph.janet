@@ -235,15 +235,25 @@
   (def worktree-map @{})
   (each worktree worktrees (put worktree-map (worktree :branch) (worktree :path)))
   (def items
-    (map
-      (fn [ref]
-        (def change-count (length (git/changes (worktree-map (ref :ref)))))
-        (def change-message @"")
-        (cond
-          (= change-count 1) (buffer/push change-message " " (string change-count) " uncommited change")
-          (> change-count 1) (buffer/push change-message " " (string change-count) " uncommited changes"))
-        (string (git/exec-slurp (util/arch-dir) "rev-parse" "--abbrev-ref" (ref :ref)) ": " (pretty-branch-status (ref :status)) change-message))
-      (git/refs/status/long (util/arch-dir))))
+    (filter (fn [x] x)
+      (map
+        (fn [ref]
+          (if (worktree-map (ref :ref))
+            (do 
+              (def change-count (length (git/changes (worktree-map (ref :ref)))))
+              (def change-message @"")
+              (cond
+                (= change-count 1) (buffer/push change-message " " (string change-count) " uncommited change")
+                (> change-count 1) (buffer/push change-message " " (string change-count) " uncommited changes"))
+              (string (git/exec-slurp (util/arch-dir)
+                                      "rev-parse"
+                                      "--abbrev-ref"
+                                      (ref :ref))
+                      ": "
+                      (pretty-branch-status (ref :status))
+                      change-message))
+            nil))
+        (git/refs/status/long (util/arch-dir)))))
   (print (string/join items "\n")))
 
 (defn cli/tools [args]
