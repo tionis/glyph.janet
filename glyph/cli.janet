@@ -1,3 +1,4 @@
+#!/bin/env janet
 (import ./init :prefix "" :export true)
 (import ./options :export true)
 (use spork)
@@ -221,6 +222,14 @@
              ensure - ensure the daemon is running
              status - query the status of the daemon`)))
 
+(defn pretty-branch-status [status]
+  (case status
+    :ahead "\x1b[93mahead\x1b[0m"
+    :behind "\x1b[93mbehind\x1b[0m"
+    :both "\x1b[93mboth\x1b[0m"
+    :up-to-date "\x1b[92mup-to-date\x1b[0m"
+    (error "unknown status")))
+
 (defn cli/tools [args]
   (case (first args)
     "ensure-pull-merges-submodules" (git/submodules/update/set (util/arch-dir) "merge" :show-message true :recursive true)
@@ -253,7 +262,7 @@
   (case (first args)
     "setup" (cli/setup (slice args 1 -1))
     "store" (cli/store (slice args 1 -1))
-    "status" (print (string/join (map |(string ($0 :ref) ": " ($0 :status)) (git/refs/status (util/arch-dir))) "\n"))
+    "status" (print (string/join (map |(string ($0 :ref) ": " (pretty-branch-status ($0 :status))) (git/refs/status (util/arch-dir))) "\n"))
     "collections" (cli/collections (slice args 1 -1))
     "scripts" (print "To add user scripts just add them in the $GLYPH_DIR/scripts directory")
     "daemon" (cli/daemon (slice args 1 -1))
