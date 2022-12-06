@@ -73,7 +73,8 @@
               (if (os/stat ".main.info.json")
                 (let [info (json/decode (slurp ".main.info.json"))]
                   (if (info "interpreter")
-                    (os/execute [;(info "interpreter") ".main" ;args] :p)))
+                    (os/execute [;(info "interpreter") ".main" ;args] :p)
+                    (error "collections .main file is not executable and no fallback could be found")))
                 (error "collections .main file is not executable and no fallback could be found")))
             (error "collection has no .main or is not initialized"))))
     (if (index-of name (scripts/ls))
