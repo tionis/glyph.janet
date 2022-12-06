@@ -188,8 +188,14 @@
               (error (string "did not expect " $1 " as %{upstream:trackshort} in for-each-ref message"))))
     :main (some :line)}))
 
-(defn refs/status [dir]
+(defn refs/status/short [dir]
   (peg/match branch-status-patt (exec-slurp dir "for-each-ref" "--format=%(refname:short)%00%(upstream:trackshort)%00" "refs/heads")))
+
+(defn refs/status/long [dir]
+  (peg/match branch-status-patt (exec-slurp dir "for-each-ref" "--format=%(refname)%00%(upstream:trackshort)%00" "refs/heads")))
+
+
+(defn refs/status [dir] (refs/status/short dir))
 
 (defn default-branch
   "get the default branch of optional remote"

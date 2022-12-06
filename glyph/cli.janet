@@ -230,6 +230,22 @@
     :up-to-date "\x1b[92mup-to-date\x1b[0m"
     (error "unknown status")))
 
+(defn cli/status []
+  (def worktrees (git/worktree/list (util/arch-dir)))
+  (def worktree-map @{})
+  (each worktree worktrees (put worktree-map (worktree :branch) (worktree :path)))
+  (def items
+    (map
+      (fn [ref]
+        (def change-count (length (git/changes (worktree-map (ref :ref)))))
+        (def change-message @"")
+        (cond
+          (= change-count 1) (buffer/push change-message " " (string change-count) " uncommited change")
+          (> change-count 1) (buffer/push change-message " " (string change-count) " uncommited changes"))
+        (string (git/exec-slurp (util/arch-dir) "rev-parse" "--abbrev-ref" (ref :ref)) ": " (pretty-branch-status (ref :status)) change-message))
+      (git/refs/status/long (util/arch-dir))))
+  (print (string/join items "\n")))
+
 (defn cli/tools [args]
   (case (first args)
     "ensure-pull-merges-submodules" (git/submodules/update/set (util/arch-dir) "merge" :show-message true :recursive true)
@@ -262,7 +278,7 @@
   (case (first args)
     "setup" (cli/setup (slice args 1 -1))
     "store" (cli/store (slice args 1 -1))
-    "status" (print (string/join (map |(string ($0 :ref) ": " (pretty-branch-status ($0 :status))) (git/refs/status (util/arch-dir))) "\n"))
+    "status" (cli/status)
     "collections" (cli/collections (slice args 1 -1))
     "scripts" (print "To add user scripts just add them in the $GLYPH_DIR/scripts directory")
     "daemon" (cli/daemon (slice args 1 -1))
