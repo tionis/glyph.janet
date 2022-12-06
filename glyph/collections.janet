@@ -43,13 +43,21 @@
              (error "remote with same name as collection already exists"))))
   (git/loud arch-dir "fetch" name (string (collection :remote-branch) ":" name))
   (git/loud arch-dir "branch" (string "--set-upstream-to=" name "/" (collection :remote-branch)) name)
-  (git/loud arch-dir "worktree" "add" path name))
+  (git/loud arch-dir "worktree" "add" path name)
+  # TODO detect if the filesystem at path does not support executable flag
+  # if it doesn't call (git/loud path config core.fileMode false)
+  )
 
 (defn collections/deinit [name]
   (def collection (collections/get name))
   (unless (collection :cached) (error "collection not initialized"))
   (git/loud (util/arch-dir) "worktree" "remove" (collection :path))
   (print "Collection deinitialized")) # TODO add note about deleting it and reclaiming disk space with git lfs prune/git gc deleting branch etc. (maybe add collections/gc?)
+
+(defn- is-executable [stat]
+  (or (= ((stat :permissions) 2) 120)
+      (= ((stat :permissions) 5) 120)
+      (= ((stat :permissions) 8) 120)))
 
 (defn collections/execute [name args]
   (def arch-dir (util/arch-dir))
@@ -58,8 +66,15 @@
     (do (def prev-dir (os/cwd))
         (defer (os/cd prev-dir)
           (os/cd (collection :path))
-          (if (os/stat ".main")
-            (os/execute [".main" ;args])
+          (def stat (os/stat ".main"))
+          (if (and stat (= (stat :mode) :file))
+            (if (is-executable stat)
+              (os/execute [".main" ;args])
+              (if (os/stat ".main.info.json")
+                (let [info (json/decode (slurp ".main.info.json"))]
+                  (if (info "interpreter")
+                    (os/execute [(info "interpreter") ".main" ;args] :p)))
+                (error "collections .main file is not executable and no fallback could be found")))
             (error "collection has no .main or is not initialized"))))
     (if (index-of name (scripts/ls))
       (do (os/cd (util/arch-dir)) (os/execute [(path/join "scripts" name) ;args]))
