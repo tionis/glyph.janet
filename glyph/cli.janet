@@ -253,7 +253,7 @@
   (case (first args)
     "setup" (cli/setup (slice args 1 -1))
     "store" (cli/store (slice args 1 -1))
-    "status" (git/loud arch-dir "for-each-ref" "--format=%(refname:short) %(upstream:track) %(upstream:remotename)" "refs/heads")
+    "status" (print (string/join (map |(string ($0 :ref) ": " ($0 :status)) (git/refs/status (util/arch-dir))) "\n"))
     "collections" (cli/collections (slice args 1 -1))
     "scripts" (print "To add user scripts just add them in the $GLYPH_DIR/scripts directory")
     "daemon" (cli/daemon (slice args 1 -1))

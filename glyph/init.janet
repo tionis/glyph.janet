@@ -14,12 +14,7 @@
 (defn sync
   "synchronize glyph archive"
   []
-  # TODO better sync:
-  # update all references with `glyph git fetch --all`
-  # check which branches need to be merged in (handle submodules)
-  # push only if needed
-  # add force push that pushes all (including git lfs push --all)
-  (git/loud (util/arch-dir) "fetch" "--all")
+  (git/loud (util/arch-dir) "fetch" "--all" "--jobs" (string (length (string/split "\n" (git/exec-slurp (util/arch-dir) "remote")))))
   (each ref (git/refs/status (util/arch-dir))
     (case (ref :status)
       :both (do (git/pull (util/arch-dir))
