@@ -11,10 +11,6 @@
 ### Legacy Support ###
 (defn modules/execute [name args] (collections/execute name args))
 
-(defn- get-ref-path [ref]
-  (def collection (collections/get (ref :ref)))
-  (if collection (collection :path) (util/arch-dir)))
-
 (defn sync
   "synchronize glyph archive"
   []
@@ -22,15 +18,22 @@
     (if (scripts-result :error)
       (error (string/format "%j" scripts-result))))
   (git/loud (util/arch-dir) "fetch" "--all" "--jobs" (string (length (string/split "\n" (git/exec-slurp (util/arch-dir) "remote")))))
-  (each ref (git/refs/status/short (util/arch-dir))
-    (case (ref :status)
-      :both (do (def path (get-ref-path ref))
-                (git/pull path)
-                (git/push path :ensure-pushed true))
-      :ahead (git/push (get-ref-path ref) :ensure-pushed true)
-      :behind (git/pull (get-ref-path ref))
-      :up-to-date :noop
-      (error "unknown ref status")))
+  # TODO bug!
+  # this applies to all refs not only those that have a worktree connected
+  # so either silently merge branch in background somehow or use worktrees/list as input insteadof of refs/status/short
+  (def worktrees (git/worktree/list (util/arch-dir)))
+  (def worktree-map @{})
+  (each worktree worktrees (put worktree-map (worktree :branch) (worktree :path)))
+  (each ref (git/refs/status/long (util/arch-dir))
+    (def path (worktree-map (ref :ref)))
+    (if path
+      (case (ref :status)
+        :both (do (git/pull path)
+                  (git/push path :ensure-pushed true))
+        :ahead (git/push path :ensure-pushed true)
+        :behind (git/pull path)
+        :up-to-date :noop
+        (error "unknown ref status"))))
   (collections/sync)
   (scripts/post-sync))
 
