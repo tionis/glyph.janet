@@ -100,13 +100,13 @@
     (do (if fetch (loud dir fetch))
         (def branch (current-branch dir))
         (filter |(if (= $0 "") false true)
-                (string/split "\n" (exec-slurp dir "rev-list" "--oneline" (string "^origin/" branch) branch))))
+                (string/split "\n" (exec-slurp dir "rev-list" "--oneline" (string "^" (exec-slurp dir "rev-parse" "--abbrev-ref" (string branch "@{u}"))) branch))))
     []))
 
 (defn push
   "git push the specified repo with modifiers"
   [dir &named silent ensure-pushed remote background]
-  (def args @["push"])
+  (def args @["push" "--recurse-submodules=on-demand"])
   (if remote (array/push args remote))
   (if ensure-pushed
     (each submodule-path (ls-submodule-paths dir :recursive true)

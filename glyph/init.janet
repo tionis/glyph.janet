@@ -17,10 +17,13 @@
   (git/loud (util/arch-dir) "fetch" "--all" "--jobs" (string (length (string/split "\n" (git/exec-slurp (util/arch-dir) "remote")))))
   (each ref (git/refs/status (util/arch-dir))
     (case (ref :status)
-      :both (do (git/pull (util/arch-dir))
-                (git/push (util/arch-dir) :ensure-pushed true))
-      :ahead (git/push (util/arch-dir) :ensure-pushed true)
-      :behind (git/pull (util/arch-dir))))
+      :both (do (def path ((collections/get (ref :ref)) :path))
+                (git/pull path)
+                (git/push path :ensure-pushed true))
+      :ahead (git/push ((collections/get (ref :ref)) :path) :ensure-pushed true)
+      :behind (git/pull ((collections/get (ref :ref)) :path))
+      :up-to-date :noop
+      (error "unknown ref status")))
   (collections/sync))
 
 (defn fsck []
