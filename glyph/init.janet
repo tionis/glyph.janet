@@ -14,6 +14,9 @@
 (defn sync
   "synchronize glyph archive"
   []
+  (let [scripts-result (scripts/pre-sync)]
+    (if (scripts-result :error)
+      (error (string/format "%j" scripts-result))))
   (git/loud (util/arch-dir) "fetch" "--all" "--jobs" (string (length (string/split "\n" (git/exec-slurp (util/arch-dir) "remote")))))
   (each ref (git/refs/status (util/arch-dir))
     (case (ref :status)
@@ -24,18 +27,12 @@
       :behind (git/pull ((collections/get (ref :ref)) :path))
       :up-to-date :noop
       (error "unknown ref status")))
-  (collections/sync))
+  (collections/sync)
+  (scripts/post-sync))
 
 (defn fsck []
   (def arch-dir (util/arch-dir))
   (print "Starting normal recursive git fsck...")
   (git/fsck arch-dir)
   (print)
-  (each name (collections/ls)
-    (def collection (collections/get name))
-    (def info-path (path/join arch-dir (collection :path) ".main.info.json"))
-    (if (os/stat info-path)
-        (do (def info (json/decode (slurp info-path)))
-            (if (index-of "fsck" (info "supported"))
-                (do (print "Starting additional fsck for  " name)
-                    (collections/execute name ["fsck"])))))))
+  (collections/fsck))

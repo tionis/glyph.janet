@@ -9,5 +9,8 @@
         [])))
 
 # TODO add pre-sync hook
+(defn pre-sync []
+  {:error false})
 
 # TODO add post-sync hook
+(defn post-sync [])

@@ -1,4 +1,3 @@
 # ToDo
-- [ ] migrate away from worktree due to bugs in the imeplementation
-- [ ] force all collections to have sync command
+- [ ] add status feature for collections
 - [ ] add remaining todos here

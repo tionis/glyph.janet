@@ -71,5 +71,15 @@
     (if (os/stat info-path)
         (do (def info (json/decode (slurp info-path)))
             (if (index-of "sync" (info "supported"))
-                (do (print "Starting additional sync for  " (collection :name))
+                (do (print "Starting additional sync for " (collection :name))
                     (collections/execute (collection :name) ["sync"])))))))
+
+(defn collections/fsck []
+  (each name (collections/ls)
+    (def collection (collections/get name))
+    (def info-path (path/join (collection :path) ".main.info.json"))
+    (if (os/stat info-path)
+        (do (def info (json/decode (slurp info-path)))
+            (if (index-of "fsck" (info "supported"))
+                (do (print "Starting additional fsck for " name)
+                    (collections/execute name ["fsck"])))))))
