@@ -1,6 +1,7 @@
 #!/bin/env janet
 (import ./init :prefix "" :export true)
 (import ./options :export true)
+(import jeff)
 (use spork)
 
 # TODO for cosmo integration
@@ -173,14 +174,21 @@
          If you already have a glyph repo setup you can simply clone it via git clone.
          After cloning use glyph setup collections to set up your collections`))
 
+(defn cli/setup/interactive []
+  (cache/set "node/os" (jeff/choose ["arch" "termux" "ubuntu"] :prmpt "Choose OS (or specify other)> "))
+  (prin "Please specify a name for this node> ")(flush)
+  (cache/set "node/name" (string/trimr (getline))))
+
 (defn cli/setup/clone [args]
   (unless (first args) (do (print "specify remote!")(os/exit 1)))
-  (os/execute ["git" "clone" (first args) (util/arch-dir)] :p))
+  (os/execute ["git" "clone" (first args) (util/arch-dir)] :p)
+  (cli/setup/interactive))
 
 (defn cli/setup [args]
   (case (first args)
     "collections" (cli/setup/collections (slice args 1 -1))
     "clone" (cli/setup/clone (slice args 1 -1))
+    "setup" (cli/setup/interactive)
     "help" (cli/setup/help)
     (cli/setup/help)))
 
