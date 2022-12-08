@@ -161,9 +161,6 @@
   (if (or (not collection) (not (collection :cached))) (do (print "Collection " name " not found, aborting...") (os/exit 1)))
   (collections/deinit name))
 
-(defn cli/setup/collections [args]
-  (error "Not implemented yet")) # TODO implement collections setup using jeff + interactive wizard
-
 (defn cli/setup/help []
   (print `To setup your own glyph archive you just need to do following things:
            1. create a directory at ${GLYPH_DIR:-~/.glyph}
@@ -174,6 +171,9 @@
          If you already have a glyph repo setup you can simply clone it via git clone.
          After cloning use glyph setup collections to set up your collections`))
 
+(defn cli/setup/collections [] # add fancy interface once jeff supports multi-select
+  (print "To set up your collections just use the glyph collections init command"))
+
 (defn cli/setup/interactive []
   (cache/set "node/os" (jeff/choose ["arch" "termux" "ubuntu"] :prmpt "Choose OS (or specify other)> "))
   (prin "Please specify a name for this node> ")(flush)
@@ -182,7 +182,9 @@
 (defn cli/setup/clone [args]
   (unless (first args) (do (print "specify remote!")(os/exit 1)))
   (os/execute ["git" "clone" (first args) (util/arch-dir)] :p)
-  (cli/setup/interactive))
+  (git/loud (util/arch-dir) "lfs" "install")
+  (cli/setup/interactive)
+  (cli/setup/collections))
 
 (defn cli/setup [args]
   (case (first args)
