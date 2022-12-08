@@ -102,7 +102,7 @@
 (defn interactive-select
   "let user interactivly select an element of the given array"
   [arr]
-  (jeff/choose arr :prmpt "" :keywords? true))
+  (jeff/choose arr :prmpt "" :keywords? true :use-fzf (dyn :use-fzf)))
 
 (defn file/select
   "let user interactivly select a file, optionally accepts a files-override for a custom file set and preview-command to show the output of in a side window for the currently selected file"
@@ -365,6 +365,9 @@
               "ask-commit-message" {:kind :flag
                                     :short "ac"
                                     :help "ask for the commit message instead of auto generating one"}
+              "fzf" {:kind :flag
+                     :action (fn [] (setdyn :use-fzf true))
+                     :help "use fzf instead of jeff for interactive selection"}
               "cat" {:kind :flag
                      :short "c"
                      :help "do not edit selected file, just print it to stdout"}
