@@ -1,5 +1,4 @@
 #!/bin/env janet
-# TODO add calibre library support
 (use glyph/helpers)
 
 (defn cli/help []

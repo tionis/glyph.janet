@@ -177,7 +177,8 @@
 (defn cli/setup/interactive []
   (cache/set "node/os" (jeff/choose ["arch" "termux" "ubuntu"] :prmpt "Choose OS (or specify other)> "))
   (prin "Please specify a name for this node> ")(flush)
-  (cache/set "node/name" (string/trimr (getline))))
+  (cache/set "node/name" (string/trimr (getline)))
+  (scripts/setup/exec))
 
 (defn cli/setup/clone [args]
   (unless (first args) (do (print "specify remote!")(os/exit 1)))
@@ -261,7 +262,9 @@
                                       (ref :ref))
                       ": "
                       (pretty-branch-status (ref :status))
-                      change-message))
+                      change-message
+                      # TODO if collection supports the "status" feature, add it's output here
+                      ))
             nil))
         (git/refs/status/long (util/arch-dir)))))
   (print (string/join items "\n")))
