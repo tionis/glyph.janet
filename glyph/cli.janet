@@ -188,7 +188,7 @@
 
 (defn cli/setup [args]
   (case (first args)
-    "collections" (cli/setup/collections (slice args 1 -1))
+    "collections" (cli/setup/collections)
     "clone" (cli/setup/clone (slice args 1 -1))
     "setup" (cli/setup/interactive)
     "help" (cli/setup/help)
