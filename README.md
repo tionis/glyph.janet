@@ -17,5 +17,10 @@ Collections are simple scripts implemented in a git repository. To keep the setu
 Large parts of glyph are self documenting via the cli and --help flags, following things should be noted:  
 - Glyph discoveres the git repo it should work on first by looking up the `GLYPH_DIR` environment variable and defaults to `$HOME/.glyph`
 
+## Design
+Glyph functions as CLI application that manages a git repo in `$GLYPH_DIR` that contains metadata about your collections and also allows your scripts to share a global key-value database and cache. In the future glyph will also manage secrets and cryptographic keys here.  
+To check out a collection glyph creates a git worktree at the path specified in which the collection files are available.  
+Glyph furthermore allows collections to integrate further with glyphs processes by specifying additional optional features in a `.main.info.json` file. For example could a script be run after the first check out of a collection that install some dependencies.
+
 ## Contact Me
 If anyone relies on this tool, please inform me over [any communication channel](https://tionis.dev) (including GitHub issues) so that I don't push a change that crashes your workflow.
