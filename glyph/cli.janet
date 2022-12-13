@@ -241,7 +241,9 @@
     :up-to-date "\x1b[92mup-to-date\x1b[0m"
     (error "unknown status")))
 
-(defn cli/status []
+(defn cli/status
+  "print status of glyph repo worktrees to stdout in human-readable output"
+  []
   (def worktrees (git/worktree/list (util/arch-dir)))
   (def worktree-map @{})
   (each worktree worktrees (put worktree-map (worktree :branch) (worktree :path)))

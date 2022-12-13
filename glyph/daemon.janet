@@ -1,8 +1,10 @@
 (use spork)
 (import ./util)
+(use ./store)
+(use ./sync)
 
 (defn get-socket-path [] (path/join (util/arch-dir) ".git" "glyph-daemon.socket"))
-(defn client [] (rpc/client :unix get-socket-path))
+(defn client [] (rpc/client :unix (get-socket-path)))
 
 (defn check
   "check wether a functional daemon is running and return true if it does"
@@ -13,26 +15,6 @@
         true
         false))
     ([err] false)))
-
-(defn sync/enable
-  "enabled the daemon sync"
-  []
-  # TODO set config option
-  # TODO send command to daemon if running
-  )
-
-(defn sync/disable
-  "disables the daemon sync"
-  []
-  # TODO set config option
-  # TODO send command to daemon if running
-  )
-
-(defn sync/status
-  "returns the status of the daemon sync option as boolean"
-  []
-  # TODO query the sync option
-  )
 
 (defn add-job
   [args &named note priority qname timeout expiration input]
@@ -85,22 +67,32 @@
 (defn sync/enable
   "enabled the daemon sync"
   []
-  # TODO set config option
-  # TODO send command to daemon if running
-  )
+  (cache/get "glyph/daemon/sync/status" true))
 
 (defn sync/disable
   "disables the daemon sync"
   []
-  # TODO set config option
-  # TODO send command to daemon if running
-  )
+  (cache/get "glyph/daemon/sync/status" false))
 
 (defn sync/status
   "returns the status of the daemon sync option as boolean"
   []
-  # TODO query the sync option
-  )
+  (cache/get "glyph/daemon/sync/status"))
+
+(defn sync []
+  (when (cache/get "glyph/daemon/sync/status")
+    (sync)
+    (def next-job-timestamp (+ (* 5 60) (os/time)))
+    (add-job ["janet" # Schedule next sync
+              "-e"
+              (string `(import glyph/daemon)
+                      (daemon/schedule-job ` next-job-timestamp " "
+                      `:note "regular sync job"
+                       :priority 5
+                       :qname :default
+                       :timeout nil
+                       :expiration nil
+                       :input nil)`)])))
 
 (defn launch []
   (ensure-tasker)
@@ -109,7 +101,6 @@
      :sync/disable sync/disable
      :sync/enable sync/enable
      :shutdown shutdown
-     :sync (fn [x] x)
      :add-job daemon-add-job
      :ping (fn [] :pong)}
     :unix (get-socket-path)))
