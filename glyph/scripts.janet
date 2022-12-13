@@ -15,9 +15,21 @@
     (os/execute [script-path])
     (print "No setup script found, skipping...")))
 
-# TODO add pre-sync hook
 (defn pre-sync []
-  {:error false})
+  (def hook-path (path/join (util/arch-dir) ".git" "hooks" "pre-sync"))
+  (let [stat (os/stat hook-path)]
+    (if (and stat (= (stat :mode) :directory))
+      (let [status (os/execute [hook-path])]
+        (if (= status 0)
+            {:error false}
+            {:error true :message "pre-sync hook failed"})))))
 
-# TODO add post-sync hook
-(defn post-sync [])
+(defn post-sync []
+  (def hook-path (path/join (util/arch-dir) ".git" "hooks" "post-sync"))
+  (let [stat (os/stat hook-path)]
+    (if (and stat (= (stat :mode) :directory))
+      (let [status (os/execute [hook-path])]
+        (if (= status 0)
+            {:error false}
+            {:error true :message "post-sync hook failed"})))))
+

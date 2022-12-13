@@ -18,9 +18,6 @@
     (if (scripts-result :error)
       (error (string/format "%j" scripts-result))))
   (git/loud (util/arch-dir) "fetch" "--all" "--jobs" (string (length (string/split "\n" (git/exec-slurp (util/arch-dir) "remote")))))
-  # TODO bug!
-  # this applies to all refs not only those that have a worktree connected
-  # so either silently merge branch in background somehow or use worktrees/list as input insteadof of refs/status/short
   (def worktrees (git/worktree/list (util/arch-dir)))
   (def worktree-map @{})
   (each worktree worktrees (put worktree-map (worktree :branch) (worktree :path)))
