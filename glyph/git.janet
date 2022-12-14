@@ -1,6 +1,5 @@
 (import spork/sh)
 (import spork/path)
-(import ./daemon)
 
 (defn exec-slurp
   "given a git dir and some arguments execute the git subcommand on wiki"
@@ -63,7 +62,6 @@
   (def fout (sh/devnull))
   (def ferr (sh/devnull))
   (os/spawn ["git" "-C" dir ;args] :pd {:out fout :err ferr}))
-  #(daemon/add-job ["git" "-C" dir ;args])) # TODO use glyph background daemon if possible
 
 (defn pull
   "git pull the specified repo with modifiers"

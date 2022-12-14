@@ -1,3 +1,8 @@
+(import ./collections :prefix "")
+(import ./scripts)
+(import ./git)
+(import ./util)
+
 (defn sync
   "synchronize all worktrees in glyph repo"
   []

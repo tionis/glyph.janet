@@ -58,7 +58,7 @@
                                           (peg/match pattern $0))
                                      (array/push ret $0))))
     (if (= ((os/stat glob-pattern) :mode) :directory)
-        (sh/scan-directory "." |(if (= ((os/stat $0) :mode) :file) (array/push ret $0)))
+        (do (os/cd glob-pattern)(sh/scan-directory "." |(if (= ((os/stat $0) :mode) :file) (array/push ret $0))))
         (error "pattern invalid and/or directory does not exist")))
   (os/cd prev)
   ret)

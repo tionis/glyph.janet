@@ -67,12 +67,12 @@
 (defn sync/enable
   "enabled the daemon sync"
   []
-  (cache/get "glyph/daemon/sync/status" true))
+  (cache/set "glyph/daemon/sync/status" true))
 
 (defn sync/disable
   "disables the daemon sync"
   []
-  (cache/get "glyph/daemon/sync/status" false))
+  (cache/set "glyph/daemon/sync/status" false))
 
 (defn sync/status
   "returns the status of the daemon sync option as boolean"
