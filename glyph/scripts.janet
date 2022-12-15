@@ -22,7 +22,8 @@
       (let [status (os/execute [hook-path])]
         (if (= status 0)
             {:error false}
-            {:error true :message "pre-sync hook failed"})))))
+            {:error true :message "pre-sync hook failed"}))
+      {:error false})))
 
 (defn post-sync []
   (def hook-path (path/join (util/arch-dir) ".git" "hooks" "post-sync"))
