@@ -178,6 +178,7 @@
   (cache/set "node/os" (jeff/choose ["arch" "termux" "ubuntu"] :prmpt "Choose OS (or specify other)> "))
   (prin "Please specify a name for this node> ")(flush)
   (cache/set "node/name" (string/trimr (getline)))
+  (init-keys)
   (scripts/setup/exec))
 
 (defn cli/setup/clone [args]
