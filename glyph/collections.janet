@@ -7,25 +7,25 @@
 (import ./util)
 
 (defn collections/add [name description remote remote-branch]
-  (config/set (string "collections/" name)
+  (store/set (string "collections/" name)
               {:remote remote :description description :remote-branch remote-branch}
-               :commit-message (string "config: added \"" name "\" module")))
+               :commit-message (string "store: added \"" name "\" module")))
 
 (defn collections/ls [&opt pattern]
  (if (or (not pattern) (= pattern ""))
-  (map |(misc/trim-prefix "collections/" $0) (config/ls "collections/*"))
-  (map |(misc/trim-prefix "collections/" $0) (config/ls (string "collections/" pattern)))))
+  (map |(misc/trim-prefix "collections/" $0) (store/ls "collections/*"))
+  (map |(misc/trim-prefix "collections/" $0) (store/ls (string "collections/" pattern)))))
 
 (defn collections/nuke [name]
-  (config/set (string "collections/" name)
+  (store/set (string "collections/" name)
               nil
-              :commit-message (string "config: removed \"" name "\" collection")))
+              :commit-message (string "store: removed \"" name "\" collection")))
 
 (defn collections/get [name]
   # this, collections/init and collections/deinit are the only parts of the collections integration that have a hard dependency on git worktrees
   # if normal repos are to be used in the future modify these two functions
   (label result
-    (def collection (config/get (string "collections/" name)))
+    (def collection (store/get (string "collections/" name)))
     (unless collection (return result nil))
     (def cached (first (filter |(= ($0 :branch) (string "refs/heads/" name)) (git/worktree/list (util/arch-dir)))))
     (def metadata @{:cached (if cached true false)})
@@ -63,7 +63,7 @@
   (def collection (collections/get name))
   (if (collection :cached) (error "collection already initialized"))
   (def arch-dir (util/arch-dir))
-  (git/loud (util/arch-dir) "config" "push.default" "upstream") # TODO hotfix remove later
+  (git/loud (util/arch-dir) "store" "push.default" "upstream") # TODO hotfix remove later
   (try
     (git/exec-slurp arch-dir "remote" "add" name (collection :remote))
     ([err] (if (not= (git/exec-slurp arch-dir "remote" "get-url" name) (collection :remote))

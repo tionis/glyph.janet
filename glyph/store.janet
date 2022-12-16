@@ -71,11 +71,17 @@
   ret)
 
 (defn- get-config-dir [] (path/join (util/arch-dir) "config"))
-(defn config/get [key] (generic/get (get-config-dir) key))
-(defn config/set [key value &named commit-message] (generic/set (get-config-dir) key value :commit-message commit-message))
-(defn config/ls [&opt glob-pattern] (generic/ls (get-config-dir) glob-pattern))
-(defn config/rm [key] (config/set key nil))
-(defn config/ls-contents [glob-pattern] (generic/ls-contents (get-config-dir) glob-pattern))
+(defn store/get [key] (generic/get (get-config-dir) key))
+(defn store/set [key value &named commit-message] (generic/set (get-config-dir) key value :commit-message commit-message))
+(defn store/ls [&opt glob-pattern] (generic/ls (get-config-dir) glob-pattern))
+(defn store/rm [key] (store/set key nil))
+(defn store/ls-contents [glob-pattern] (generic/ls-contents (get-config-dir) glob-pattern))
+
+(defn config/get :deprecated [key] (generic/get (get-config-dir) key))
+(defn config/set :deprecated [key value &named commit-message] (generic/set (get-config-dir) key value :commit-message commit-message))
+(defn config/ls :deprecated [&opt glob-pattern] (generic/ls (get-config-dir) glob-pattern))
+(defn config/rm :deprecated [key] (store/set key nil))
+(defn config/ls-contents :deprecated [glob-pattern] (generic/ls-contents (get-config-dir) glob-pattern))
 
 (defn- get-cache-dir [] (path/join (util/arch-dir) ".git/glyph/cache"))
 (defn cache/get [key] (generic/get (get-cache-dir) key))

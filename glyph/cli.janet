@@ -67,25 +67,25 @@
                 (print_val val)))
             (do
               (if (< (length (args :default)) 2) (error "Key to get not specified"))
-              (let [val (config/get ((args :default) 1))]
+              (let [val (store/get ((args :default) 1))]
                 (print_val val))))
     "set" (do (if (< (length (args :default)) 3) (error "Key or value to set not specified"))
               (def val (parse ((args :default) 2)))
               (if (args "local")
                 (cache/set ((args :default) 1) val)
-                (config/set ((args :default) 1) val)))
+                (store/set ((args :default) 1) val)))
     "ls"  (if (args "local") # TODO think of better way for passing list to user (human readable key=value but if --json is given print list as json?)
             (let [patt (if (> (length (args :default)) 1) (string/join (slice (args :default) 1 -1) "/") nil)
                 list (cache/ls-contents patt)]
               (print (string/format "%P" list)))
             (let [patt (if (> (length (args :default)) 1) (string/join (slice (args :default) 1 -1) "/") nil)
-                list (config/ls-contents patt)]
+                list (store/ls-contents patt)]
               (print (string/format "%P" list))))
     "rm"  (if (args "local")
             (do (if (< (length (args :default)) 2) (error "Key to delete not specified"))
               (cache/rm ((args :default) 1)))
             (do (if (< (length (args :default)) 2) (error "Key to delete not specified"))
-              (config/rm ((args :default) 1))))
+              (store/rm ((args :default) 1))))
     (do (eprint "Unknown subcommand")
         (os/exit 1))))
 
@@ -113,7 +113,7 @@
       :args ["glyph" ;args]))
   (unless res (os/exit 1))
   (collections/add (res "name") (res "description") (res "remote") (res "remote-branch"))
-  (print "Collection was recorded in config, you can now initialize it using glyph collections init `" (res "name") "`"))
+  (print "Collection was recorded in glyph store, you can now initialize it using glyph collections init `" (res "name") "`"))
 
 (defn cli/collections/ls [&opt args]
   (print
