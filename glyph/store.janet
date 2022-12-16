@@ -58,7 +58,7 @@
                                           (peg/match pattern $0))
                                      (array/push ret $0))))
     (let [glob-stat (os/stat glob-pattern)]
-      (if (and glob-stat (= ((glob-stat :mode) :directory)))
+      (if (and glob-stat (= (glob-stat :mode) :directory))
           (do (sh/scan-directory glob-pattern |(if (= ((os/stat $0) :mode) :file) (array/push ret $0))))
           @[])))
   (os/cd prev)
