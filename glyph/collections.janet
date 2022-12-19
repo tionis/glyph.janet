@@ -13,7 +13,7 @@
 
 (defn collections/ls [&opt pattern]
  (if (or (not pattern) (= pattern ""))
-  (map |(misc/trim-prefix "collections/" $0) (store/ls "collections/*"))
+  (map |(misc/trim-prefix "collections/" $0) (store/ls "collections"))
   (map |(misc/trim-prefix "collections/" $0) (store/ls (string "collections/" pattern)))))
 
 (defn collections/nuke [name]
