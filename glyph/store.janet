@@ -48,7 +48,7 @@
     (if (or (= stat nil) (not (= (stat :mode) :file)))
       nil # Key does not exist
       (let [data (parse (slurp path))]
-        (if (not (data :value)) (error "malformed store")) # TODO handle this error better ()
+        (if (not (data :value)) (error (string "malformed store at " key))) # TODO handle this error better ()
         (if (and (data :ttl) (< (data :ttl) (os/time)))
           (do
             (generic/set base-dir key nil :no-git no-git :commit-message (if commit-message commit-message (string "store: expired " key)))
