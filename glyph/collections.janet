@@ -113,15 +113,6 @@
                 (do (print "Executing post-sync hook for " (collection :name))
                     (collections/execute (collection :name) (get-in info ["hooks" "post-sync"]))))))))
 
-(defn collections/post-sync []
-  (each collection (filter |($0 :cached) (map |(merge (collections/get $0) {:name $0}) (collections/ls)))
-    (def info-path (path/join (collection :path) ".main.info.json"))
-    (if (os/stat info-path)
-        (do (def info (json/decode (slurp info-path)))
-            (if (get-in info ["supported" "post-sync"])
-                (do (print "Starting additional sync for " (collection :name))
-                    (collections/execute (collection :name) (get-in info ["supported" "post-sync"]))))))))
-
 (defn collections/fsck []
   (each name (collections/ls)
     (def collection (collections/get name))
