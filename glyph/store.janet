@@ -21,14 +21,14 @@
 #  (jhydro/kx/n2 (kx :kx) "this is a public pre-shared key!" kx-public-key kx-secret-key)
 
 (defn- generic/set [base-dir key value &named recipients no-git commit-message ttl signing-key]
-  (var encryption-key @"")
-  (if recipients (set encryption-key (jhydro/secretbox/keygen)))
-  (defn gen-encryption-kx [recipient-public-key]
-    (def packet @"")
-    (def kx (jhydro/kx/n1 packet "this is a public pre-shared key!" recipient-public-key))
-    (def key (jhydro/secretbox/encrypt encryption-key 0 "glyphekx" (kx :tx)))
-    {:kx packet :key key})
-  (def kx (map gen-encryption-kx recipients))
+  # (var encryption-key @"")
+  # (if recipients (set encryption-key (jhydro/secretbox/keygen)))
+  # (defn gen-encryption-kx [recipient-public-key]
+  #   (def packet @"")
+  #   (def kx (jhydro/kx/n1 packet "this is a public pre-shared key!" recipient-public-key))
+  #   (def key (jhydro/secretbox/encrypt encryption-key 0 "glyphekx" (kx :tx)))
+  #   {:kx packet :key key})
+  # (def kx (map gen-encryption-kx (if recipients recipients [])))
   # TODO add encryption (add recipient ids to :recipients as a map with their id as key and a kx buffer as the value)
   # get kx buffer by using the converting the recipient ids to public keys
   # TODO add signing (add source node id and sign whole encoded buffer, store signature in second line)
