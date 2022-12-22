@@ -18,7 +18,7 @@
 (defn pre-sync []
   (def hook-path (path/join (util/arch-dir) ".git" "hooks" "pre-sync"))
   (let [stat (os/stat hook-path)]
-    (if (and stat (= (stat :mode) :directory))
+    (if (and stat (= (stat :mode) :file))
       (let [status (os/execute [hook-path])]
         (if (= status 0)
             {:error false}
