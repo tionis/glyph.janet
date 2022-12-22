@@ -9,6 +9,7 @@
   (let [scripts-result (scripts/pre-sync)]
     (if (scripts-result :error)
       (error (string/format "%j" scripts-result))))
+  (collections/pre-sync)
   (git/loud (util/arch-dir) "fetch" "--all" "--jobs" (string (length (string/split "\n" (git/exec-slurp (util/arch-dir) "remote")))))
   (def worktrees (git/worktree/list (util/arch-dir)))
   (def worktree-map @{})
@@ -24,4 +25,5 @@
         :up-to-date :noop
         (error "unknown ref status"))))
   (collections/sync)
+  (collections/post-sync)
   (scripts/post-sync))

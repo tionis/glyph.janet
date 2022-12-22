@@ -87,14 +87,40 @@
   (git/loud (util/arch-dir) "worktree" "remove" (collection :path))
   (print "Collection deinitialized")) # TODO add note about deleting it and reclaiming disk space with git lfs prune/git gc deleting branch etc. (maybe add collections/gc?)
 
+(defn collections/pre-sync []
+  (each collection (filter |($0 :cached) (map |(merge (collections/get $0) {:name $0}) (collections/ls)))
+    (def info-path (path/join (collection :path) ".main.info.json"))
+    (if (os/stat info-path)
+        (do (def info (json/decode (slurp info-path)))
+            (if (get-in info ["hooks" "pre-sync"])
+                (do (print "Executing post-sync hook for " (collection :name))
+                    (collections/execute (collection :name) (get-in info ["hooks" "pre-sync"]))))))))
+
 (defn collections/sync []
   (each collection (filter |($0 :cached) (map |(merge (collections/get $0) {:name $0}) (collections/ls)))
     (def info-path (path/join (collection :path) ".main.info.json"))
     (if (os/stat info-path)
         (do (def info (json/decode (slurp info-path)))
             (if (get-in info ["supported" "sync"])
+                (print "Warning: " (collection :name) " has deprecated \"supported\" key \"sync\". this is no longer supported"))))))
+                    
+(defn collections/post-sync []
+  (each collection (filter |($0 :cached) (map |(merge (collections/get $0) {:name $0}) (collections/ls)))
+    (def info-path (path/join (collection :path) ".main.info.json"))
+    (if (os/stat info-path)
+        (do (def info (json/decode (slurp info-path)))
+            (if (get-in info ["hooks" "post-sync"])
+                (do (print "Executing post-sync hook for " (collection :name))
+                    (collections/execute (collection :name) (get-in info ["hooks" "post-sync"]))))))))
+
+(defn collections/post-sync []
+  (each collection (filter |($0 :cached) (map |(merge (collections/get $0) {:name $0}) (collections/ls)))
+    (def info-path (path/join (collection :path) ".main.info.json"))
+    (if (os/stat info-path)
+        (do (def info (json/decode (slurp info-path)))
+            (if (get-in info ["supported" "post-sync"])
                 (do (print "Starting additional sync for " (collection :name))
-                    (collections/execute (collection :name) (get-in info ["supported" "sync"]))))))))
+                    (collections/execute (collection :name) (get-in info ["supported" "post-sync"]))))))))
 
 (defn collections/fsck []
   (each name (collections/ls)

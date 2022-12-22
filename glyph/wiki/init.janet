@@ -338,11 +338,14 @@
     shell - open a shell session in git repo and auto commit changes
     git $args - pass args thru to git`)
 
-(defn cli [args]
+(defn cli [args additional-commands]
   # Parse special subcommands without evaluating normal options
-  (case (first args)
-    "shell" (do (shell (os/cwd) (slice args 1 -1)) (os/exit 0))
-    "git" (os/exit (os/execute ["git" ;(slice args 1 -1)] :p)))
+  (def pre-commands (merge additional-commands
+                           {"shell" (fn [args] (shell (os/cwd) args))
+                            "git" (fn [args] (os/execute ["git" ;args] :p))}))
+  (when (and (first args) (pre-commands (first args)))
+    ((pre-commands (first args)) (slice args 1 -1))
+    (os/exit 0))
   (def res (options/parse
     :args (array/concat @[""] args)
     :description `A simple local cli wiki using git for synchronization
@@ -415,4 +418,4 @@
     _ (print "Invalid syntax!")))
 
 (defn main [myself & args]
-  (cli args))
+  (cli args []))
