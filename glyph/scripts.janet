@@ -32,5 +32,6 @@
       (let [status (os/execute [hook-path])]
         (if (= status 0)
             {:error false}
-            {:error true :message "post-sync hook failed"})))))
+            {:error true :message "post-sync hook failed"}))
+      {:error false})))
 

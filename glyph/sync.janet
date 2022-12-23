@@ -26,4 +26,6 @@
         (error "unknown ref status"))))
   (collections/sync)
   (collections/post-sync)
-  (scripts/post-sync))
+  (let [scripts-result (scripts/post-sync)]
+    (if (scripts-result :error)
+      (error (string/format "%j" scripts-result)))))
