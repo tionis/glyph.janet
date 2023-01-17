@@ -248,29 +248,23 @@
   (def worktrees (git/worktree/list (util/arch-dir)))
   (def worktree-map @{})
   (each worktree worktrees (put worktree-map (worktree :branch) (worktree :path)))
-  (def items
-    (filter (fn [x] x)
-      (map
-        (fn [ref]
-          (if (worktree-map (ref :ref))
-            (do 
-              (def change-count (length (git/changes (worktree-map (ref :ref)))))
-              (def change-message @"")
-              (cond
-                (= change-count 1) (buffer/push change-message " " (string change-count) " uncommited change")
-                (> change-count 1) (buffer/push change-message " " (string change-count) " uncommited changes"))
-              (string (git/exec-slurp (util/arch-dir)
-                                      "rev-parse"
-                                      "--abbrev-ref"
-                                      (ref :ref))
-                      ": "
-                      (pretty-branch-status (ref :status))
-                      change-message
-                      # TODO if collection supports the "status" feature, add it's output here
-                      ))
-            nil))
-        (git/refs/status/long (util/arch-dir)))))
-  (print (string/join items "\n")))
+  (each ref (git/refs/status/long (util/arch-dir))
+      (if (worktree-map (ref :ref))
+        (do
+          (def change-count (length (git/changes (worktree-map (ref :ref)))))
+          (def change-message @"")
+          (cond
+            (= change-count 1) (buffer/push change-message " " (string change-count) " uncommited change")
+            (> change-count 1) (buffer/push change-message " " (string change-count) " uncommited changes"))
+          (print (string (git/exec-slurp (util/arch-dir)
+                                  "rev-parse"
+                                  "--abbrev-ref"
+                                  (ref :ref))
+                  ": "
+                  (pretty-branch-status (ref :status))
+                  change-message
+                  # TODO if collection supports the "status" feature, add it's output here
+                  ))))))
 
 (defn cli/tools [args]
   (case (first args)
