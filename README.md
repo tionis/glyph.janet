@@ -19,6 +19,7 @@ Large parts of glyph are self documenting via the cli and --help flags, followin
 
 ## Design
 Glyph functions as CLI application that manages a git repo in `$GLYPH_DIR` that contains metadata about your collections and also allows your scripts to share a global key-value database and cache. In the future glyph will also manage secrets and cryptographic keys here.  
+Collections are tracked via a git remote and linked to branch in the local glyph repo.  
 To check out a collection glyph creates a git worktree at the path specified in which the collection files are available.  
 Glyph furthermore allows collections to integrate further with glyphs processes by specifying additional optional features in a `.main.info.json` file. For example could a script be run after the first check out of a collection that install some dependencies.
 
