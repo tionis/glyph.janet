@@ -28,7 +28,7 @@
     (def collection (store/get (string "collections/" name)))
     (unless collection (return result nil))
     (def cached (first (filter |(= ($0 :branch) (string "refs/heads/" name)) (git/worktree/list (util/arch-dir)))))
-    (def metadata @{:cached (if cached true false)})
+    (def metadata @{:cached (if cached true false) :name name})
     (if (metadata :cached) (merge-into metadata cached))
     (return result (merge collection metadata))))
 
@@ -58,6 +58,15 @@
     (if (index-of name (scripts/ls))
       (do (os/cd (util/arch-dir)) (os/execute [(path/join "scripts" name) ;args]))
       (error (string "neither a collection nor a user script called " name " exists")))))
+
+
+(defn collections/status [name]
+  (def collection (collections/get name))
+  (def info-path (path/join (collection :path) ".main.info.json"))
+  (if (os/stat info-path)
+      (do (def info (json/decode (slurp info-path)))
+          (if (get-in info ["hooks" "status"])
+              (collections/execute (collection :name) (get-in info ["hooks" "status"]))))))
 
 (defn collections/init [name path]
   (def collection (collections/get name))
