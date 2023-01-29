@@ -1,5 +1,6 @@
 # Glyph
 > NOTICE: This tool is in a very early alpha state and is still being designed.  
+> WARNING: Before you use this tool, please understand the Security Implications listed in [SECURITY.md](SECURITY.md)
 
 Glyph is a command line tool that manage your personal files for you using "collections" that implement their own managment commands. A few examples for such collection scripts can be found in the examples directory.  
 The integrated wiki module helps you in managing a markdown-based personal knowledge base and is designed to be used with a commandline editor like vim (the author uses neovim in combination with vimwiki).  
