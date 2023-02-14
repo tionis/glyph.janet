@@ -26,3 +26,7 @@ Glyph furthermore allows collections to integrate further with glyphs processes 
 
 ## Contact Me
 If anyone relies on this tool, please inform me over [any communication channel](https://tionis.dev) (including GitHub issues) so that I don't push a change that crashes your workflow.
+
+## License
+This Code is published under the MIT license.  
+<a href="https://endsoftwarepatents.org/innovating-without-patents"><img style="height: 45px;" src="https://static.fsf.org/nosvn/esp/logos/patent-free.svg"></a>
