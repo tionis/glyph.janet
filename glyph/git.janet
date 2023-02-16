@@ -177,7 +177,7 @@
 
 (def- branch-status-patt (peg/compile
   ~{:line (replace
-            (* (capture (to "\0")) "\0" (capture (+ ">" "<" "<>" "=")) "\0" (opt "\n"))
+            (* (capture (to "\0")) "\0" (capture (to "\0")) "\0" (opt "\n"))
             ,|(case $1
               ">" {:ref $0 :status :ahead}
               "<" {:ref $0 :status :behind}
