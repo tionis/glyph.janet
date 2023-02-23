@@ -33,12 +33,14 @@
 (defn get-default-log-doc "get the default content for a log file given a date as iso-string"
   [date_str]
   (def today (date/from-string date_str))
-  (string "# " date_str " - " ((date/week-days :long) (today :week-day)) "\n"
+  (string "# " date_str " - " ((date/week-days :long) (today :week-day)) "\n" # TODO maybe add more date metadata here (like week number)
           "[yesterday](" (:date-format (date/days-ago 1 today)) ") <--> [tomorrow](" (:date-format (date/days-after 1 today)) ")\n"
           "\n"
           "## ToDo\n"
           "\n"
-          "## Notes\n"))
+          "## Notes\n"
+          "\n"
+          "## Memos\n"))
 
 (defn indexify_dir # TODO check if this still works after the file-id migration
   "transform given dir to index.md based md structure" # TODO also transform non markdown files into their markdown equivalent (probably using the html render function)
