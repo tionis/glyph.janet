@@ -31,7 +31,7 @@
     :posix "/dev/null"))
 
 (defn get-default-log-doc "get the default content for a log file given a date as iso-string"
-  [date_str]
+  [date_str] # TODO load template from wiki and fall back to built in tempalte (use spork/temple for this in combination with chronos)
   (def today (date/from-string date_str))
   (string "# " date_str " - " ((date/week-days :long) (today :week-day)) "\n" # TODO maybe add more date metadata here (like week number)
           "[yesterday](" (:date-format (date/days-ago 1 today)) ") <--> [tomorrow](" (:date-format (date/days-after 1 today)) ")\n"
