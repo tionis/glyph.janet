@@ -25,7 +25,7 @@
   (peg/compile ~(* (opt " ") (capture (between 1 2 (* (not " ") 1))) " " (capture (some 1)))))
 
 (defn changes # TODO migrate to porcelain v2 to detect submodule states https://git-scm.com/docs/git-status#_changed_tracked_entries
-  "given a git dir get the changes in the working tree of the git repo"
+  "given a git dir get the changes in the working tree of the git repo" # TODO bug does not detect paths with spaces in it due to quoting issue (does not understand quotes)
   [git-repo-dir]
   (def changes @[])
   (each line (string/split "\n" (exec-slurp git-repo-dir "status" "--porcelain=v1"))
@@ -37,16 +37,14 @@
     (put ret (change 1) (change 0)))
   ret)
 
-(def- submodules-status-line-peg "pattern to parse a line from git submodules status for it's submodule path"
-  (peg/compile ~(* (+ " " "+" "-") (40 :w) " " (<- (to (+ " " -1))) (? (* " " (to -1))))))
-
 (defn ls-submodule-paths
   "lists submodule paths in the repo at dir, if recursive is true this is done recursivly"
   [dir &named recursive]
-  (def lines (string/split "\n" (if recursive
-                                  (exec-slurp dir "submodule" "status" "--recursive")
-                                  (exec-slurp dir "submodule" "status"))))
-  (filter (fn [x] x) (map |(first (peg/match submodules-status-line-peg $0)) lines)))
+  (string/split
+    "\n"
+    (if recursive
+      (exec-slurp dir "submodule" "foreach" "--recursive" "-q" "echo $sm_path")
+      (exec-slurp dir "submodule" "foreach" "-q" "echo $sm_path"))))
 
 (defn get-object-path
   [dir object-id &named tree]
@@ -77,6 +75,7 @@
           (loud dir ;args)))))
 
 (defn ls-submodules
+  "list submodule names"
   [dir]
   (def gitmodules-path (path/join dir ".gitmodules"))
   (if (not (os/stat gitmodules-path))
