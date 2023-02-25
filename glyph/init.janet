@@ -9,6 +9,12 @@
 (import ./sync :prefix "" :export true)
 (import ./scripts :export true)
 (import ./daemon :export true)
+(import ./ssh :export true)
+
+(defn init-env
+  "initialize glyphs environment"
+  []
+  (ssh/agent/start))
 
 ### Legacy Support ###
 (defn modules/execute [name args] (collections/execute name args))

@@ -59,7 +59,6 @@
       (do (os/cd (util/arch-dir)) (os/execute [(path/join "scripts" name) ;args]))
       (error (string "neither a collection nor a user script called " name " exists")))))
 
-
 (defn collections/status [name]
   (def collection (collections/get name))
   (def info-path (path/join (collection :path) ".main.info.json"))
