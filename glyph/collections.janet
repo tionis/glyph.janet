@@ -71,7 +71,7 @@
   (def collection (collections/get name))
   (if (collection :cached) (error "collection already initialized"))
   (def arch-dir (util/arch-dir))
-  (git/loud (util/arch-dir) "store" "push.default" "upstream") # TODO hotfix remove later
+  (git/loud (util/arch-dir) "config" "push.default" "upstream")
   (try
     (git/exec-slurp arch-dir "remote" "add" name (collection :remote))
     ([err] (if (not= (git/exec-slurp arch-dir "remote" "get-url" name) (collection :remote))
