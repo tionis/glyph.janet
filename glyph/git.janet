@@ -96,8 +96,7 @@
   (if (os/stat (path/join dir ".git"))
     (do (if fetch (loud dir fetch))
         (def branch (current-branch dir))
-        (filter |(if (= $0 "") false true)
-                (string/split "\n" (exec-slurp dir "rev-list" "--oneline" (string "^" (exec-slurp dir "rev-parse" "--abbrev-ref" (string branch "@{u}"))) branch))))
+        (freeze (filter (fn [x] (if x x (if (= x "") nil x))) (string/trimr (exec-slurp dir "cherry"))))) # TODO parse output or switch to equivalent porcelain command
     []))
 
 (defn push
@@ -106,7 +105,8 @@
   (def args @["push" "--recurse-submodules=on-demand"])
   (if remote (array/push args remote))
   (if ensure-pushed
-    (each submodule-path (ls-submodule-paths dir :recursive true)
+    (each relative-submodule-path (ls-submodule-paths dir :recursive true)
+      (def submodule-path (path/join dir relative-submodule-path))
       (try
         (do (def unpushed-changes (get-unpushed-changes submodule-path))
             (if (> (length unpushed-changes) 0)
