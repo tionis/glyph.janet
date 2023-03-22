@@ -1,5 +1,10 @@
 (import spork/sh)
 (import spork/path)
+(import jeff)
+
+(defn- exec [& argv]
+  (when (not= (os/execute [;argv] :p) 0)
+    (error (string "command '" (string/join argv " ") "' failed"))))
 
 (defn exec-slurp
   "given a git dir and some arguments execute the git subcommand on wiki"
@@ -202,3 +207,32 @@
     (if (= (remote-head-result :code) 0)
       (peg/match ~(* remote "/" (capture (any 1))) (remote-head-result :out))
       (current-branch dir)))) # default to current branch if remote hash no HEAD
+
+
+(defn interactive-sparse-checkout [dir]
+  (def selected-paths @[])
+  (def available-paths (distinct (map |(path/dirname $0) (string/split "\0" (exec-slurp dir "ls-tree" "--name-only" "-r" "-z" "HEAD")))))
+  (defn add [] (array/push selected-paths (jeff/choose available-paths)))
+  (defn rm [] (array/remove selected-paths (index-of (jeff/choose selected-paths) selected-paths)))
+  (defn print-help []
+    (print `Available Commands:
+             add - add a path to list
+             rm - remove a path from list
+             exit - exit the program aborting all
+             done - finish path selection continue with program
+             help - show this help`))
+  (forever
+    (def command (string/trimr (getline "> ")))
+    (case command
+      "add" (add)
+      "a" (add)
+      "rm" (rm)
+      "remove" (rm)
+      "abort" (os/exit 0)
+      "exit" (os/exit 0)
+      "done" (break)
+      "d" (break)
+      "end" (break)
+      (print-help)))
+    (exec "git" "sparse-checkout" "set" ;selected-paths)
+    (exec "git" "checkout" "HEAD"))
