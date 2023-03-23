@@ -278,12 +278,25 @@
     (print `Unknown command! Available commands:
              ensure-pull-merges-submodules - ensure that new commits in submodules are merged in rather than checked out via the submodule.$NAME.update git config option. this is done recursively.`)))
 
+(defn cli/nodes/get-ips [args]
+  (if (= (length args) 0) (error "node name not specified"))
+  (each ip (values (store/ls-contents (string "nodes/" (first args) "/ips/")))
+    (print ip)))
+
+(defn cli/nodes [args]
+  (case (first args)
+    "get-ips" (cli/nodes/get-ips (slice args 1 -1))
+    "help" (print `Available Commands
+                    get-ips $NODE_NAME - get the stored ip's of specified node`)
+    (print "Unknown Command, use subcommand 'help' to get a list of vaild commands.")))
+
 (defn print-root-help []
   (def preinstalled `Available Subcommands:
                       collections - manage your custom collections, use 'glyph collections help' for more information
                       scripts - manage your user scripts
                       git - execute git command on the arch repo
                       sync - sync the glyph archive
+                      nodes - node management
                       fsck - perform a filesystem check of arch repo
                       help - print this help`)
   (def collections (map |(string "  " $0 " - " ((collections/get $0) :description)) (collections/ls)))
@@ -308,6 +321,8 @@
     "status" (cli/status)
     "s" (cli/status)
     "collections" (cli/collections (slice args 1 -1))
+    "nodes" (cli/nodes (slice args 1 -1))
+    "crypto" (print "Nothing here yet")
     "scripts" (print "To add user scripts just add them in the $GLYPH_DIR/scripts directory")
     "daemon" (cli/daemon (slice args 1 -1))
     "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice args 1 -1)] :p))
