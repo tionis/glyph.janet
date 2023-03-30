@@ -1,5 +1,5 @@
-  :name "glyph"
 (declare-project
+  :name "glyph"
   :description "a personal data manager for the command line"
   :dependencies  ["https://github.com/janet-lang/spork"
                   "https://github.com/janet-lang/jhydro"
