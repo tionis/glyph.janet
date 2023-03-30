@@ -1,7 +1,6 @@
 (import ./git :export true)
 (import spork :prefix "" :export true)
 (import jeff :export true)
-(import fzy :export true)
 (import ./glob :export true)
 
 (defn shell/root [module-dir &named command]
