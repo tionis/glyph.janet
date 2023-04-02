@@ -24,15 +24,14 @@
   (if command
     (os/execute [(os/getenv "SHELL") "-c" command] :p)
     (os/execute [(os/getenv "SHELL")] :p))
-  (if commit
-    (if (> (length (git/changes submodule-dir)) 0)
-      (do (git/loud submodule-dir "add" "-A")
-          (git/loud submodule-dir "commit" "-m" (if message message "updated contents manually in shell")))))
-  (if ((git/changes module-dir) submodule) # TODO BUG this does not only detect new commits but also working tree modifications
-      (do (git/push submodule-dir :background true)
-          (git/loud module-dir "add" submodule)
-          (git/loud module-dir "commit" "-m" (string "updated " submodule))
-          (git/push module-dir :background true))))
+  (when (and commit (> (length (git/changes submodule-dir)) 0))
+    (git/loud submodule-dir "add" "-A")
+    (git/loud submodule-dir "commit" "-m" (if message message "updated contents manually in shell")))
+  (when ((git/changes module-dir) submodule) # TODO BUG this does not only detect new commits but also working tree modifications
+    (git/push submodule-dir :background true)
+    (git/loud module-dir "add" submodule)
+    (git/loud module-dir "commit" "-m" (string "updated " submodule)) # TODO BUG this does not trigger a push in the module-dir for some reason
+    (git/push module-dir :background true))) # TODO init push in general when there are unpushed changes
 
 (defn shell [module-dir args &named commit-in-submodules command submodule-commit-message]
   (setdyn :args [module-dir ;args])
