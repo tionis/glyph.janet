@@ -7,7 +7,10 @@
   (os/cd module-dir)
   (git/pull module-dir :background true)
   (if command
-    (os/execute [(os/getenv "SHELL") "-c" command] :p)
+    (type command
+      :function (command)
+      :string (os/execute [(os/getenv "SHELL") "-c" command] :p)
+      :tuple (os/execute command :p))
     (os/execute [(os/getenv "SHELL")] :p))
   (if (not= (length (git/changes module-dir)) 0)
       (do (git/loud module-dir "add" "-A")
@@ -22,7 +25,10 @@
         (git/pull module-dir :background true))
     ([err] (print "not pulling submodule due to " err)))
   (if command
-    (os/execute [(os/getenv "SHELL") "-c" command] :p)
+    (case (type command)
+      :function (command)
+      :string (os/execute [(os/getenv "SHELL") "-c" command] :p)
+      :tuple (os/execute command :p))
     (os/execute [(os/getenv "SHELL")] :p))
   (when (and commit (> (length (git/changes submodule-dir)) 0))
     (git/loud submodule-dir "add" "-A")
@@ -51,11 +57,11 @@
         (first (res :default))
         (jeff/choose submodules :prmpt "select shell path> ")))
   (if (= selected ".")
-      (shell/root module-dir :command (if command command (res "command")))
+      (shell/root module-dir :command (or command (res "command")))
       (shell/submodule module-dir selected
-                       :command (if command command (res "command"))
+                       :command (or command (res "command"))
                        :commit (or commit-in-submodules (res "commit-in-submodules"))
-                       :message (if submodule-commit-message submodule-commit-message (res "submodule-commit-message")))))
+                       :message (or submodule-commit-message (res "submodule-commit-message")))))
 
 (defn generic/sync [&named remote]
   (def root (os/cwd))
