@@ -106,8 +106,10 @@
 
 (defn push
   "git push the specified repo with modifiers"
-  [dir &named silent ensure-pushed remote background]
-  (def args @["push" "--recurse-submodules=on-demand"])
+  [dir &named silent ensure-pushed remote background recurse-submodules]
+  (default recurse-submodules true)
+  (def args @["push"])
+  (if recurse-submodules (array/push args "--recurse-submodules=on-demand"))
   (if remote (array/push args remote))
   (if ensure-pushed
     (each relative-submodule-path (ls-submodule-paths dir :recursive true)

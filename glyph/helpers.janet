@@ -37,7 +37,8 @@
     (git/push submodule-dir :background true)
     (git/loud module-dir "add" submodule)
     (git/loud module-dir "commit" "-m" (string "updated " submodule)) # TODO BUG this does not trigger a push in the module-dir for some reason
-    (git/push module-dir :background true))) # TODO init push in general when there are unpushed changes
+    # TODO hotfix below due to git or gitea error, unsure which one of those exactly
+    (git/push module-dir :background true :recurse-submodules false))) # TODO init push in general when there are unpushed changes
 
 (defn shell [module-dir args &named commit-in-submodules command submodule-commit-message]
   (setdyn :args [module-dir ;args])
