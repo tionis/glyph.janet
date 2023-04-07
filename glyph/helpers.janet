@@ -7,7 +7,7 @@
   (os/cd module-dir)
   (git/pull module-dir :background true)
   (if command
-    (type command
+    (case (type command)
       :function (command)
       :string (os/execute [(os/getenv "SHELL") "-c" command] :p)
       :tuple (os/execute command :p))
