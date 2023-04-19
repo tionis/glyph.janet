@@ -51,12 +51,17 @@
               (if (os/stat ".main.info.json")
                 (let [info (json/decode (slurp ".main.info.json"))]
                   (if (info "interpreter")
-                    (os/execute [;(info "interpreter") ".main" ;args] :p)
+                    (let [return-code (os/execute [;(info "interpreter") ".main" ;args] :p)]
+                      (if (not= return-code 0)
+                        (error (string/format "return-code of .main in %s with args %j was %s" name args return-code))))
                     (error "collections .main file is not executable and no fallback could be found")))
                 (error "collections .main file is not executable and no fallback could be found")))
             (error "collection has no .main or is not initialized"))))
     (if (index-of name (scripts/ls))
-      (do (os/cd (util/arch-dir)) (os/execute [(path/join "scripts" name) ;args]))
+      (do (os/cd (util/arch-dir))
+          (let [return-code (os/execute [(path/join "scripts" name) ;args])]
+            (if (not= return-code 0)
+              (error (string/format "return-code of userscript %s with args %j was %j" name args return-code)))))
       (error (string "neither a collection nor a user script called " name " exists")))))
 
 (defn collections/status [name]
