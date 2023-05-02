@@ -78,4 +78,4 @@
   (if ((git/changes (os/cwd)) module-path)
     (do (git/loud prev "add" module-path)
         (git/loud prev "commit" "-m" (string "changes in " module-path))
-        (git/push prev :background true))))
+        (git/push prev :background true :recurse-submodules false))))
