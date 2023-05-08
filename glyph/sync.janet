@@ -16,14 +16,25 @@
   (each worktree worktrees (put worktree-map (worktree :branch) (worktree :path)))
   (each ref (git/refs/status/long (util/arch-dir))
     (def path (worktree-map (ref :ref)))
-    (if path
+    (when path
+      (def pre-sync-hash
+        (git/exec-slurp (util/arch-dir)
+                        "rev-parse"
+                        (string
+                          (git/exec-slurp (util/arch-dir)
+                                          "rev-parse"
+                                          "--abbrev-ref"
+                                          (ref :ref))
+                          "@{upstream}")))
       (case (ref :status)
         :both (do (git/pull path)
                   (git/push path :ensure-pushed true))
         :ahead (git/push path :ensure-pushed true)
         :behind (git/pull path)
         :up-to-date :noop
-        (error "unknown ref status"))))
+        (error "unknown ref status"))
+      # TODO do post-sync script handling here (collections/post-sync :pre-sync-hash pre-sync-hash)
+      ))
   (collections/sync)
   (collections/post-sync)
   (let [scripts-result (scripts/post-sync)]
