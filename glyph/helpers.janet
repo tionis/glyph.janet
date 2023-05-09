@@ -3,7 +3,8 @@
 (import jeff :export true)
 (import ./glob :export true)
 
-(defn shell/root [module-dir &named command]
+(defn shell/root [module-dir &named command commit-message]
+  (default commit-message "updated contents manually in shell")
   (os/cd module-dir)
   (git/pull module-dir :background true)
   (if command
@@ -14,7 +15,7 @@
     (os/execute [(os/getenv "SHELL")] :p))
   (if (not= (length (git/changes module-dir)) 0)
       (do (git/loud module-dir "add" "-A")
-          (git/loud module-dir "commit" "-m" "updated contents manually in shell")))
+          (git/loud module-dir "commit" "-m" commit-message)))
   (git/push module-dir :background true))
 
 (defn shell/submodule [module-dir submodule &named commit command message]
