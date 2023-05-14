@@ -305,6 +305,7 @@
 
 (defn main [myself & args]
   (init-env)
+  (util/check-deps)
   (def arch-dir (util/get-arch-dir))
   (if (and (not (let [stat (os/stat arch-dir)] (and stat (= (stat :mode) :directory))))
            (not= (first args) "setup"))
