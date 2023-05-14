@@ -59,7 +59,9 @@
   (when (not (dyn :deps-checked))
     (unless (is-at-least-version (get-git-version) minimum-git-version)
       (error (string "minimum-git-version is "
-                     (string/join minimum-git-version ".")
+                     (string/join (map |(string $0)
+                                       minimum-git-version) ".")
                      " but detected git version is "
-                     (string/join (get-git-version) "."))))
+                     (string/join (map |(string $0)
+                                       (get-git-version)) "."))))
     (setdyn :deps-checked true)))
