@@ -1,16 +1,18 @@
 (import spork/base64)
 (import spork/path)
 (import spork/sh)
-(import jhydro)
 (import ./git)
 (import ./glob)
 (import ./util)
+(import ./crypto)
 
-######### TODO #########
-# Add encryption       #
-# Add node management  #
-########################
-# Add signing          #
+######### TODO ###############################################################
+# Add encryption                                                             #
+#   Add node-id -> encryption-key mapping                                    #
+# Add node management                                                        #
+# Add signing                                                                #
+# Rework trust architecture by leveraging trusted keys verified with git-skm #
+##############################################################################
 
 (defn- create_dirs_if_not_exists [dir]
   (let [meta (os/stat dir)]
@@ -20,7 +22,7 @@
 #(defn- get-key-from-glyph-store-kx [kx kx-public-key kx-secret-key]
 #  (jhydro/kx/n2 (kx :kx) "this is a public pre-shared key!" kx-public-key kx-secret-key)
 
-(defn- generic/set [base-dir key value &named recipients no-git commit-message ttl signing-key]
+(defn- generic/set [base-dir key value &named recipients no-git commit-message ttl sign]
   # (var encryption-key @"")
   # (if recipients (set encryption-key (jhydro/secretbox/keygen)))
   # (defn gen-encryption-kx [recipient-public-key]
@@ -32,6 +34,7 @@
   # TODO add encryption (add recipient ids to :recipients as a map with their id as key and a kx buffer as the value)
   # get kx buffer by using the converting the recipient ids to public keys
   # TODO add signing (add source node id and sign whole encoded buffer, store signature in second line)
+  # NOTE is signature needed if using git as commits are signed?
   (def formatted-key (path/join ;(path/posix/parts key)))
   (def path (path/join base-dir formatted-key))
   (def arch-dir (util/arch-dir))
@@ -51,15 +54,14 @@
       (default commit-message (string "store: set " key " to " value))
       (def encoded-data (string/format "%j" data))
       (def to-write (buffer encoded-data))
-      (when signing-key
-        (def signature (jhydro/sign/create encoded-data "glyph-st" signing-key))
-        (buffer/push to-write "\n" (base64/encode signature)))
+      (when sign (buffer/push to-write "\n" (crypto/sign encoded-data)))
       (spit path to-write)
       (unless no-git
         (git/loud arch-dir "reset")
         (git/loud arch-dir "add" "-f" path)
         (git/loud arch-dir "commit" "-m" commit-message)
-        (git/async arch-dir "push")))))
+        (git/async arch-dir "push"))))
+  value)
 
 (defn- generic/get [base-dir key &named check-signature check-ttl commit-message no-git]
   # TODO allow specifying trusted keys in method signature
@@ -74,7 +76,6 @@
     nil # Key does not exist
     (let [data (parse (slurp path))]
       (if (not (data :value)) (error (string "malformed store at " key))) # TODO handle this error better ()
-      # TODO check signature here
       (if (and (data :ttl) (< (data :ttl) (os/time)))
         (do
           (generic/set base-dir key nil :no-git no-git :commit-message (if commit-message commit-message (string "store: expired " key)))
@@ -108,14 +109,19 @@
 
 (defn- get-cache-dir [] (path/join (util/arch-dir) ".git/glyph/cache"))
 (defn cache/get [key] (generic/get (get-cache-dir) key :no-git true :check-signature false))
-(defn cache/set [key value &named commit-message ttl] (generic/set (get-cache-dir) key value :no-git true :commit-message commit-message :ttl ttl))
+(defn cache/set
+  "Set key to value in cache, with optional ttl (time-to-live in seconds) and encryption (not working yet, will use node's keys)"
+  [key value &named ttl encrypt]
+  (if encrypt
+    (generic/set (get-cache-dir) key value :no-git true :ttl ttl :recipients [(crypto/my-id)])
+    (generic/set (get-cache-dir) key value :no-git true :ttl ttl)))
 (defn cache/ls [&opt glob-pattern] (generic/ls (get-cache-dir) glob-pattern))
 (defn cache/rm [key] (cache/set key nil) :no-git true)
 (defn cache/ls-contents [glob-pattern] (generic/ls-contents (get-cache-dir) glob-pattern :no-git true))
 
 (defn- get-config-dir [] (path/join (util/arch-dir) "config"))
 (defn store/get [key &named commit-message] (generic/get (get-config-dir) key :commit-message commit-message))
-(defn store/set [key value &named commit-message ttl]
+(defn store/set [key value &named commit-message ttl recipients]
   (generic/set (get-config-dir)
                key value
                :commit-message commit-message
