@@ -13,6 +13,9 @@
 
 (defn loud [dir & args] (os/execute ["git" "-C" dir ;args] :p))
 
+(defn get-top-level [dir]
+  (exec-slurp dir "rev-parse" "--show-toplevel"))
+
 (def- status_codes
   "a map describing the meaning of the git status --porcelain=v1 short codes"
   {"A" :added

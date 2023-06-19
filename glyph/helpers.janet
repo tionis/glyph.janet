@@ -3,9 +3,11 @@
 (import jeff :export true)
 (import ./glob :export true)
 
-(defn shell/root [module-dir &named command commit-message]
+(defn shell/root [module-dir &named command commit-message sub-path]
   (default commit-message "updated contents manually in shell")
-  (os/cd module-dir)
+  (if sub-path
+    (os/cd (path/join module-dir sub-path))
+    (os/cd module-dir))
   (git/pull module-dir :background true)
   (if command
     (case (type command)
@@ -18,9 +20,11 @@
           (git/loud module-dir "commit" "-m" commit-message)))
   (git/push module-dir :background true))
 
-(defn shell/submodule [module-dir submodule &named commit command message]
-  (os/cd submodule)
-  (def submodule-dir (os/cwd))
+(defn shell/submodule [module-dir submodule &named commit sub-path command message]
+  (if sub-path
+    (os/cd (path/join submodule sub-path))
+    (os/cd submodule))
+  (def submodule-dir (path/join module-dir submodule))
   (try
     (do (git/current-branch module-dir)
         (git/pull module-dir :background true))
@@ -54,13 +58,20 @@
                               :default {:kind :accumulate}))
   (unless res (os/exit 1))
   (def submodules (array/concat (git/ls-submodule-paths module-dir) ["."]))
-  (def selected
+  (def selected-dir
     (if (res :default)
         (first (res :default))
         (jeff/choose submodules :prmpt "select shell path> ")))
-  (if (= selected ".")
-      (shell/root module-dir :command (or command (res "command")))
-      (shell/submodule module-dir selected
+  (def sub-path (path/relpath (git/get-top-level selected-dir) selected-dir))
+  (pp [:subpath sub-path])
+  (def module-top-level (git/get-top-level selected-dir))
+  (pp [:module-top-level module-top-level])
+  (if (= module-top-level (path/abspath module-dir))
+      (shell/root module-dir
+                  :command (or command (res "command"))
+                  :sub-path sub-path)
+      (shell/submodule module-dir module-top-level
+                       :sub-path sub-path
                        :command (or command (res "command"))
                        :commit (or commit-in-submodules (res "commit-in-submodules"))
                        :message (or submodule-commit-message (res "submodule-commit-message")))))
