@@ -31,7 +31,6 @@
   (if sub-path
     (os/cd (path/join submodule sub-path))
     (os/cd submodule))
-  (def submodule-dir (path/join module-dir submodule))
   (try
     (do (git/current-branch module-dir)
         (git/pull module-dir :background true))
@@ -42,11 +41,11 @@
       :string (os/execute [(os/getenv "SHELL") "-c" command] :p)
       :tuple (os/execute command :p))
     (os/execute [(os/getenv "SHELL")] :p))
-  (when (and commit (> (length (git/changes submodule-dir)) 0))
-    (git/loud submodule-dir "add" "-A")
-    (git/loud submodule-dir "commit" "-m" commit-message))
+  (when (and commit (> (length (git/changes submodule)) 0))
+    (git/loud submodule "add" "-A")
+    (git/loud submodule "commit" "-m" commit-message))
   (when ((git/changes module-dir) submodule) # TODO BUG this does not only detect new commits but also working tree modifications
-    (git/push submodule-dir :background true)
+    (git/push submodule :background true)
     (git/loud module-dir "add" submodule)
     (git/loud module-dir "commit" "-m" (string "updated " submodule)) # TODO BUG this does not trigger a push in the module-dir for some reason
     # TODO hotfix below due to git or gitea error, unsure which one of those exactly
