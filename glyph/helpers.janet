@@ -4,7 +4,10 @@
 (import ./glob :export true)
 
 (defn shell/root [module-dir &named command commit-message sub-path]
-  (default commit-message "updated contents manually in shell")
+  (default commit-message
+    (if sub-path
+      (string "updated " sub-path " manually in shell")
+      "updated contents manually in shell"))
   (if sub-path
     (os/cd (path/join module-dir sub-path))
     (os/cd module-dir))
@@ -20,7 +23,11 @@
           (git/loud module-dir "commit" "-m" commit-message)))
   (git/push module-dir :background true))
 
-(defn shell/submodule [module-dir submodule &named commit sub-path command message]
+(defn shell/submodule [module-dir submodule &named commit sub-path command commit-message]
+  (default commit-message
+    (if sub-path
+      (string "updated " sub-path " manually in shell")
+      "updated contents manually in shell"))
   (if sub-path
     (os/cd (path/join submodule sub-path))
     (os/cd submodule))
@@ -37,7 +44,7 @@
     (os/execute [(os/getenv "SHELL")] :p))
   (when (and commit (> (length (git/changes submodule-dir)) 0))
     (git/loud submodule-dir "add" "-A")
-    (git/loud submodule-dir "commit" "-m" (if message message "updated contents manually in shell")))
+    (git/loud submodule-dir "commit" "-m" commit-message))
   (when ((git/changes module-dir) submodule) # TODO BUG this does not only detect new commits but also working tree modifications
     (git/push submodule-dir :background true)
     (git/loud module-dir "add" submodule)
@@ -63,9 +70,7 @@
         (first (res :default))
         (jeff/choose submodules :prmpt "select shell path> ")))
   (def sub-path (path/relpath (git/get-top-level selected-dir) selected-dir))
-  (pp [:subpath sub-path])
   (def module-top-level (git/get-top-level selected-dir))
-  (pp [:module-top-level module-top-level])
   (if (= module-top-level (path/abspath module-dir))
       (shell/root module-dir
                   :command (or command (res "command"))
