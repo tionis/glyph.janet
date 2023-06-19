@@ -24,6 +24,7 @@
   (git/push module-dir :background true))
 
 (defn shell/submodule [module-dir submodule &named commit sub-path command commit-message]
+  (def submodule-rel-path (path/relpath module-dir submodule))
   (default commit-message
     (if sub-path
       (string "updated " sub-path " manually in shell")
@@ -44,10 +45,10 @@
   (when (and commit (> (length (git/changes submodule)) 0))
     (git/loud submodule "add" "-A")
     (git/loud submodule "commit" "-m" commit-message))
-  (when ((git/changes module-dir) submodule) # TODO BUG this does not only detect new commits but also working tree modifications
+  (when ((git/changes module-dir) submodule-rel-path) # TODO BUG this does not only detect new commits but also working tree modifications
     (git/push submodule :background true)
     (git/loud module-dir "add" submodule)
-    (git/loud module-dir "commit" "-m" (string "updated " submodule)) # TODO BUG this does not trigger a push in the module-dir for some reason
+    (git/loud module-dir "commit" "-m" (string "updated " submodule-rel-path)) # TODO BUG this does not trigger a push in the module-dir for some reason
     # TODO hotfix below due to git or gitea error, unsure which one of those exactly
     (git/push module-dir :background true :recurse-submodules false))) # TODO init push in general when there are unpushed changes
 
