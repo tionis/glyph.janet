@@ -88,7 +88,7 @@
 
 (defn get-files
   "given a config and optional path to begin list all documents in wiki (not assets, only documents)"
-  [config &opt path]
+  [config &named path]
   (default path "")
   (def p (path/join (config :wiki-dir) path))
   (if (= ((os/stat p) :mode) :file)
@@ -108,11 +108,11 @@
 
 (defn file/select
   "let user interactivly select a file, optionally accepts a files-override for a custom file set and preview-command to show the output of in a side window for the currently selected file"
-  [config &named files-override preview-command]
+  [config &named files-override root preview-command]
   (def files (map (fn [x] (if (not= (string/find "." x) 0)
                               (util/no-ext x)
                               x))
-                  (if files-override files-override (get-files config))))
+                  (if files-override files-override (get-files config :path root))))
   (def selected (interactive-select files))
   (if selected (string selected ".md") selected))
 
@@ -176,10 +176,10 @@
 
 (defn edit/interactive
   "edit a document selected interactivly based on config"
-  [config]
-  (def file (file/select config))
+  [config &opt root]
+  (def file (file/select config :root root))
   (if file
-    (edit config file)
+    (edit config (if root (path/join root file) file))
     (eprint "No file selected!")))
 
 (defn log
@@ -340,6 +340,11 @@
     shell - open a shell session in git repo and auto commit changes
     git $args - pass args thru to git`)
 
+(defn cli/edit [config file]
+  (if (= (last file) (chr "/"))
+    (edit/interactive config file)
+    (edit config (string file ".md"))))
+
 (defn cli [args additional-commands]
   # Parse special subcommands without evaluating normal options
   (def pre-commands (merge additional-commands
@@ -415,7 +420,7 @@
     ["sync"] (sync config)
     ["lint" & patterns] (lint config patterns)
     ["graph" & args] (graph config args)
-    [file] (edit config (string file ".md"))
+    [file] (cli/edit config file)
     nil (edit/interactive config)
     _ (print "Invalid syntax!")))
 
