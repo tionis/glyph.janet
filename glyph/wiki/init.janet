@@ -192,6 +192,14 @@
   (if (not (os/stat doc_abs_path)) (spit doc_abs_path (get-default-log-doc parsed_date)))
   (edit config doc_path))
 
+(defn logui
+  [config date_arr]
+  "edit log file for date specified by an array of a fuzzy natural date input that can be empty to default to current month"
+  # TODO parse date_arr fuzzily into {:year 2020 :month 10 :day 11} or {:year 2020 :week 10}
+  # TODO show ui with fuzzy parsed input (default to current week (or maybe month))
+  # consider accuracy and show appropiate ui (e.g. when only year was given show month selection first, then after selection show day selection in selected month)
+  (error "logui not implemented yet"))
+
 (defn mv
   "move document from source to target path while also changing links linking to it"
   [config source target] # TODO also fix links so they still point at the original targets
@@ -334,6 +342,7 @@
     mv $source $target - move document from $source to $target
     search $search_term - search using a regex
     log $optional_natural_date - edit a log for an optional date
+    logui $optional_fuzzy_natural_data - same as above but use an ui to select data
     lint $optional_paths - lint whole wiki or a list of paths
     graph - show a graph of the wiki
     sync - sync the repo
@@ -417,6 +426,7 @@
     ["rm"] (rm/interactive config)
     ["mv" source target] (mv config source target)
     ["log" & date_arr] (log config date_arr)
+    ["logui" & date_arr] (logui config date_arr)
     ["sync"] (sync config)
     ["lint" & patterns] (lint config patterns)
     ["graph" & args] (graph config args)
