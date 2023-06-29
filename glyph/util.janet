@@ -1,4 +1,7 @@
 (use spork)
+(defmacro todo
+  "Add a todo item, does nothing during normal execution"
+  [&])
 (defn no-ext
   [file-path]
   (if (string/find "." file-path)
