@@ -303,35 +303,48 @@
   (def scripts (map |(string "  " $0 " - user script") (scripts/ls)))
   (print (string/join (array/concat @[preinstalled] collections scripts) "\n")))
 
-(defn main [myself & args]
+(defn main [& raw_args]
   (init-env)
   (util/check-deps)
-  (def arch-dir (util/get-arch-dir))
+  (def args (argparse/argparse
+    "Glyph is a personal data manager, based on git and written for a cli focused modular workflow"
+    "arch-dir" {:kind :option
+                :default (util/get-arch-dir)
+                :help "directory of glyph's arch repo (the metadata repo)"}
+    "working-dir" {:kind :option
+                   :short "C"
+                   :help "set working-dir of glyph"
+                   :map (fn [x] (os/cd x))}
+    :default {:kind :accumulate
+              :short-circuit true}
+    :args raw_args))
+  (unless args (os/exit 0))
+  (def arch-dir (args "arch-dir"))
   (if (and (not (let [stat (os/stat arch-dir)] (and stat (= (stat :mode) :directory))))
            (not= (first args) "setup"))
     (do
       (eprint "Arch dir does not exist, please initialize it first!")
-      (print "Short setup description:")
+      (print "Short setup description:") # TODO improve setup here
       (cli/setup/help)
       (print "For more information please refer to the glyph documentation")
       (os/exit 1)))
   (setdyn :arch-dir arch-dir)
-  (case (first args)
-    "setup" (cli/setup (slice args 1 -1))
-    "store" (cli/store (slice args 1 -1))
+  (case (first (args :rest)) # TODO this relies on my changes in spork!
+    "setup" (cli/setup (slice (args :rest) 1 -1))
+    "store" (cli/store (slice (args :rest) 1 -1))
     "status" (cli/status)
     "s" (cli/status)
-    "collections" (cli/collections (slice args 1 -1))
-    "nodes" (cli/nodes (slice args 1 -1))
+    "collections" (cli/collections (slice (args :rest) 1 -1))
+    "nodes" (cli/nodes (slice (args :rest) 1 -1))
     "crypto" (print "Nothing here yet")
     "scripts" (print "To add user scripts just add them in the $GLYPH_DIR/scripts directory")
-    "daemon" (cli/daemon (slice args 1 -1))
-    "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice args 1 -1)] :p))
+    "daemon" (cli/daemon (slice (args :rest) 1 -1))
+    "git" (os/exit (os/execute ["git" "-C" arch-dir ;(slice (args :rest) 1 -1)] :p))
     "fsck" (fsck)
     "sync" (sync)
-    "tools" (cli/tools (slice args 1 -1))
+    "tools" (cli/tools (slice (args :rest) 1 -1))
     "help" (print-root-help)
     "--help" (print-root-help)
     "-h" (print-root-help)
     nil (print-root-help)
-    (collections/execute (first args) (slice args 1 -1))))
+    (collections/execute (first (args :rest)) (slice (args :rest) 1 -1))))

@@ -10,6 +10,7 @@
 (import ./scripts :export true)
 (import ./daemon :export true)
 (import ./ssh :export true)
+(import ./argparse :export true)
 
 (defn init-env
   "initialize glyphs environment"
