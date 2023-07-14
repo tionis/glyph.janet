@@ -1,6 +1,6 @@
 (import spork/sh)
 (import spork/path)
-(import jeff)
+(import toolbox/jeff)
 
 (defn- exec [& argv]
   (when (not= (os/execute [;argv] :p) 0)

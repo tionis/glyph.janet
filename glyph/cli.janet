@@ -1,7 +1,7 @@
 #!/bin/env janet
 (import ./init :prefix "" :export true)
 (import ./options :export true)
-(import jeff)
+(import toolbox/jeff)
 
 # TODO for cosmo integration
 # support a collection that has different git dir and working dir

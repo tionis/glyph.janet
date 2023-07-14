@@ -20,15 +20,15 @@
       (sh/create-dirs dir))))
 
 #(defn- get-key-from-glyph-store-kx [kx kx-public-key kx-secret-key]
-#  (jhydro/kx/n2 (kx :kx) "this is a public pre-shared key!" kx-public-key kx-secret-key)
+#  (crypto/kx/n2 (kx :kx) "this is a public pre-shared key!" kx-public-key kx-secret-key)
 
 (defn- generic/set [base-dir key value &named recipients no-git commit-message ttl sign]
   # (var encryption-key @"")
-  # (if recipients (set encryption-key (jhydro/secretbox/keygen)))
+  # (if recipients (set encryption-key (crypto/secretbox/keygen)))
   # (defn gen-encryption-kx [recipient-public-key]
   #   (def packet @"")
-  #   (def kx (jhydro/kx/n1 packet "this is a public pre-shared key!" recipient-public-key))
-  #   (def key (jhydro/secretbox/encrypt encryption-key 0 "glyphekx" (kx :tx)))
+  #   (def kx (crypto/kx/n1 packet "this is a public pre-shared key!" recipient-public-key))
+  #   (def key (crypto/secretbox/encrypt encryption-key 0 "glyphekx" (kx :tx)))
   #   {:kx packet :key key})
   # (def kx (map gen-encryption-kx (if recipients recipients [])))
   # TODO add encryption (add recipient ids to :recipients as a map with their id as key and a kx buffer as the value)

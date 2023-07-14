@@ -2,7 +2,7 @@
 (use spork)
 (use glyph/helpers)
 (import glyph/git)
-(import jeff)
+(import toolbox/jeff)
 
 (defn get-null-file "get the /dev/null equivalent for current platform" []
   (case (os/which)

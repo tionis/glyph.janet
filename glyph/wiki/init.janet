@@ -1,9 +1,9 @@
 (import ./markdown :as "md" :export true)
 (import ./graph :export true)
-(import chronos :as "date")
+(import chronos :as "date") # TODO replace with toolbox/datetime
 (import ../git)
 #(import fzy :as "fzy")
-(import jeff)
+(import toolbox/jeff)
 (use ../helpers)
 (import spork :prefix "")
 (import ../options)

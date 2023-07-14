@@ -2,10 +2,9 @@
   :name "glyph"
   :description "a personal data manager for the command line"
   :dependencies  ["https://github.com/janet-lang/spork"
-                  "https://github.com/janet-lang/jhydro"
-                  "https://tasadar.net/tionis/jeff.git"
-                  "https://github.com/tionis/remarkable" # TODO this needs tags support
-                  "https://tasadar.net/tionis/chronos" # TODO this needs various fixes and API changes
+                  "https://tasadar.net/tionis/toolbox"
+                  "https://github.com/tionis/remarkable" # TODO this needs tags support (also replace this with mimir)
+                  "https://tasadar.net/tionis/chronos" # TODO this needs various fixes and API changes (also replace this with toolbox)
                   ])
 
 (declare-source :source ["glyph"])

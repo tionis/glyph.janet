@@ -1,6 +1,6 @@
 (import ./git :export true)
 (import spork :prefix "" :export true)
-(import jeff :export true)
+(import toolbox/jeff :export true)
 (import ./glob :export true)
 
 (defn shell/root [module-dir &named command commit-message sub-path]
