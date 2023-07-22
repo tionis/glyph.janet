@@ -1,4 +1,3 @@
-(import ./markdown :as "md" :export true)
 (import ./graph :export true)
 (import chronos :as "date") # TODO replace with toolbox/datetime
 (import ../git)
@@ -225,10 +224,10 @@
   "get content of document without metadata header"
   [path] ((peg/match patt_md_without_header (slurp path)) 0))
 
-(defn get-links
-  "get all links from document specified by path"
-  [config path]
-  (md/get-links (get-content-without-header (path/join (config :wiki-dir) path))))
+# (defn get-links
+#   "get all links from document specified by path"
+#   [config path]
+#   (md/get-links (get-content-without-header (path/join (config :wiki-dir) path))))
 
 (defn is-local-link?
   "check wether a given link it a local link or an external one"
@@ -242,15 +241,16 @@
 (defn get-graph
   "returns a graph describing the wiki using a adjacency list implemented with a map"
   [config]
-  (def adj @{})
-  (each file (get-files config)
-    (def file-id (trim-suffix ".md" file))
-    (put adj file-id @[])
-    (let [links (filter (fn [x] (is-local-link? (x :target))) (get-links config file))]
-      (each link (map (fn [x] (relative-link-to-id (config :wiki-dir) file (x :target))) links)
-        (array/push (adj file-id) link))))
-    #(if (= (length (adj file-id)) 0) (put adj file-id nil))) # Hide files that don't link to anything from graph
-  adj)
+  (error "no longer supported, will be broken until new markdown engine is built"))
+  # (def adj @{})
+  # (each file (get-files config)
+  #   (def file-id (trim-suffix ".md" file))
+  #   (put adj file-id @[])
+  #   (let [links (filter (fn [x] (is-local-link? (x :target))) (get-links config file))]
+  #     (each link (map (fn [x] (relative-link-to-id (config :wiki-dir) file (x :target))) links)
+  #       (array/push (adj file-id) link))))
+  #   #(if (= (length (adj file-id)) 0) (put adj file-id nil))) # Hide files that don't link to anything from graph
+  # adj)
 
 (defn graph/gtk
   "use local graphviz install to render the wiki graph"
