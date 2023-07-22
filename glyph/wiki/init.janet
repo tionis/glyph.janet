@@ -280,16 +280,17 @@
 (defn check_links
   "check for broken links in document specified by path and config"
   [config file-id]
-  (def broken_links @[])
-  (def file-path (string file-id ".md"))
-  (def links (filter is-local-link? (get-links config file-path))) # TODO ensure that image links are also checked in some way
-  (each link links
-    (def target (string (path/join (config :wiki-dir) (path/dirname file-id) (link :target)) ".md"))
-    (if (not= (os/stat target :mode) :file)
-        (array/push broken_links {:target target
-                                  :raw-target (link :target)
-                                  :name (link :name)})))
-  broken_links)
+  (error "markdown parser disabled for now, all features depending on it are broken until mimir can parse markdown and is integrated into glyph"))
+  # (def broken_links @[])
+  # (def file-path (string file-id ".md"))
+  # (def links (filter is-local-link? (get-links config file-path))) # TODO ensure that image links are also checked in some way
+  # (each link links
+  #   (def target (string (path/join (config :wiki-dir) (path/dirname file-id) (link :target)) ".md"))
+  #   (if (not= (os/stat target :mode) :file)
+  #       (array/push broken_links {:target target
+  #                                 :raw-target (link :target)
+  #                                 :name (link :name)})))
+  # broken_links)
 
 (defn lint
   "lint all files matching optional pattern array in wiki specified by config"
